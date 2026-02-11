@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import WhatsAppConnect from './pages/WhatsAppConnect';
 import Landing from './pages/Landing';
 import Auth from './pages/Auth';
+import AIAgentSettings from './pages/AIAgentSettings';
 
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
@@ -45,6 +46,7 @@ const App: React.FC = () => {
         <Route path="/" element={session ? <Layout /> : <Navigate to="/landing" replace />}>
           <Route index element={<Dashboard />} />
           <Route path="whatsapp" element={<WhatsAppConnect />} />
+          <Route path="ai-settings" element={<AIAgentSettings />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

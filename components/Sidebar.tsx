@@ -20,7 +20,7 @@ const Sidebar: React.FC = () => {
   const navItems = [
     { name: 'Dashboard', icon: 'dashboard', path: '/' },
     { name: 'WhatsApp Connect', icon: 'chat', path: '/whatsapp' },
-    { name: 'AI Settings', icon: 'smart_toy', path: '/settings' },
+    { name: 'Agente de IA', icon: 'smart_toy', path: '/ai-settings' },
     { name: 'Appointments', icon: 'calendar_month', path: '/appointments' },
     { name: 'Clients', icon: 'group', path: '/clients' },
     { name: 'Reports', icon: 'bar_chart', path: '/reports' },
