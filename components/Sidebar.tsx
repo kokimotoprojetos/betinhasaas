@@ -1,7 +1,22 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 const Sidebar: React.FC = () => {
+  const navigate = useNavigate();
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/landing');
+  };
+
   const navItems = [
     { name: 'Dashboard', icon: 'dashboard', path: '/' },
     { name: 'WhatsApp Connect', icon: 'chat', path: '/whatsapp' },
@@ -29,10 +44,9 @@ const Sidebar: React.FC = () => {
               key={item.name}
               to={item.path}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors group ${
-                  isActive
-                    ? 'bg-primary/10 text-primary-dark dark:text-primary font-semibold'
-                    : 'text-slate-500 hover:bg-gray-50 dark:hover:bg-white/5 dark:text-gray-400'
+                `flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors group ${isActive
+                  ? 'bg-primary/10 text-primary-dark dark:text-primary font-semibold'
+                  : 'text-slate-500 hover:bg-gray-50 dark:hover:bg-white/5 dark:text-gray-400'
                 }`
               }
             >
@@ -46,19 +60,26 @@ const Sidebar: React.FC = () => {
       </div>
 
       {/* User Profile */}
-      <div className="p-4 border-t border-gray-50 dark:border-gray-800">
-        <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer transition-colors">
-          <img
-            alt="Salon Owner Profile Picture"
-            className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAxAAsU9zks5zrkpRxBo65lUexeSK8bkx3nr6U3JJKLcHbB1-u79L_2YIqv3DdYBrUIRreM2Clb-d8NoM0kyE34jvn8p__cmI5AGJccln44nq8OuKaE5HdFtOTqm_HJ4vZK7qensP-y0vsOS-fCj1Ycgh3uGUoVCAUYysAtd6gforiQ5xk-Urg5udcOuFG0cFnwasv1Fn9b7SYzbQMG-4zQ4nsy-ssv-uRRIwCcD0qasxrxBC-N04PK-yE16CPbySYodg-kAfVNw_OB"
-          />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">Elena Rossi</p>
-            <p className="text-xs text-slate-500 dark:text-gray-400 truncate">Luxe Salon</p>
+      <div className="p-4 border-t border-gray-50 dark:border-gray-800 space-y-2">
+        <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer transition-colors group relative">
+          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold uppercase">
+            {user?.email?.charAt(0) || 'U'}
           </div>
-          <span className="material-symbols-outlined text-gray-400 text-sm">expand_more</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">
+              {user?.user_metadata?.full_name || 'Usuário'}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-gray-400 truncate">{user?.email}</p>
+          </div>
         </div>
+
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+        >
+          <span className="material-symbols-outlined">logout</span>
+          Sair
+        </button>
       </div>
     </aside>
   );

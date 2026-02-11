@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MetricCard from '../components/MetricCard';
 import { Metric, Conversation, Appointment } from '../types';
+import { supabase } from '../lib/supabase';
 
 const Dashboard: React.FC = () => {
   const [aiActive, setAiActive] = useState(true);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+  }, []);
 
   const metrics: Metric[] = [
     { label: 'Total Appointments', value: '42', trend: '+12%', trendUp: true, subtext: 'this week', icon: 'calendar_today' },
@@ -37,13 +45,22 @@ const Dashboard: React.FC = () => {
     { id: '3', name: 'Alice Wong', service: 'Full Color', time: '09:00', dayLabel: 'TMRW', isToday: false },
   ];
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Bom dia';
+    if (hour < 18) return 'Boa tarde';
+    return 'Boa noite';
+  }
+
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
       {/* Header Area */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Good morning, Luxe Salon</h1>
-          <p className="text-slate-500 dark:text-gray-400 mt-1">Here is your daily AI performance overview.</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+            {getGreeting()}, {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Profissional'}
+          </h1>
+          <p className="text-slate-500 dark:text-gray-400 mt-1">Aqui está a visão geral do seu atendimento.</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3 bg-white dark:bg-[#152e2e] px-4 py-2 rounded-full shadow-sm border border-green-100 dark:border-green-900/30">
@@ -55,13 +72,12 @@ const Dashboard: React.FC = () => {
               {aiActive ? 'WhatsApp Active' : 'AI Paused'}
             </span>
           </div>
-          <button 
+          <button
             onClick={() => setAiActive(!aiActive)}
-            className={`font-semibold px-5 py-2.5 rounded-xl shadow-lg transition-all flex items-center gap-2 text-sm ${
-                aiActive 
-                ? 'bg-primary hover:bg-primary-dark text-white dark:text-background-dark shadow-primary/20' 
+            className={`font-semibold px-5 py-2.5 rounded-xl shadow-lg transition-all flex items-center gap-2 text-sm ${aiActive
+                ? 'bg-primary hover:bg-primary-dark text-white dark:text-background-dark shadow-primary/20'
                 : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-            }`}
+              }`}
           >
             <span className="material-symbols-outlined text-[1.25rem]">{aiActive ? 'pause_circle' : 'play_circle'}</span>
             {aiActive ? 'Pause AI' : 'Resume AI'}
@@ -96,10 +112,9 @@ const Dashboard: React.FC = () => {
                       {chat.avatar ? (
                         <img alt={chat.name} className="w-10 h-10 rounded-full object-cover" src={chat.avatar} />
                       ) : (
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
-                            chat.initialsColor === 'orange' ? 'bg-orange-100 text-orange-600' : 
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${chat.initialsColor === 'orange' ? 'bg-orange-100 text-orange-600' :
                             chat.initialsColor === 'purple' ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-600'
-                        }`}>
+                          }`}>
                           {chat.initials}
                         </div>
                       )}
@@ -126,45 +141,44 @@ const Dashboard: React.FC = () => {
         <div className="flex flex-col gap-6">
           {/* Map */}
           <div className="bg-white dark:bg-[#152e2e] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden relative group h-48">
-             <img 
-                alt="Map showing salon location" 
-                className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700" 
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOctAOqRyeMEHoaUf7h0H3Mz6hbeMi-1_HHfT46GXxy5xS3kWXPdDm6OJ76Xf3NWHoQtThvTG4O7Ij1vxbMkAvoLT51MUl0bEBcCmUQFElccKFqB0U_cH2YFQzNlMCCm094aaZa1IkY8T9NN_wWCgE-Uv9-fABR8FzrMKiM3RqAe4EXtC_kmLg4YfwKHFrZWasT5ykDUB_SYbDmOGuowVdN-QJQOvR0wwxkDgVNpIRgWHAP-HrgCZ5C8MFk2ar2Yg6zt89dacWdi3P"
-             />
-             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex flex-col justify-end p-6">
-                <h3 className="text-white font-bold text-lg">Salon Performance</h3>
-                <p className="text-white/80 text-sm">Your AI is optimizing bookings in Los Angeles.</p>
-             </div>
+            <img
+              alt="Map showing salon location"
+              className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOctAOqRyeMEHoaUf7h0H3Mz6hbeMi-1_HHfT46GXxy5xS3kWXPdDm6OJ76Xf3NWHoQtThvTG4O7Ij1vxbMkAvoLT51MUl0bEBcCmUQFElccKFqB0U_cH2YFQzNlMCCm094aaZa1IkY8T9NN_wWCgE-Uv9-fABR8FzrMKiM3RqAe4EXtC_kmLg4YfwKHFrZWasT5ykDUB_SYbDmOGuowVdN-QJQOvR0wwxkDgVNpIRgWHAP-HrgCZ5C8MFk2ar2Yg6zt89dacWdi3P"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex flex-col justify-end p-6">
+              <h3 className="text-white font-bold text-lg">Salon Performance</h3>
+              <p className="text-white/80 text-sm">Your AI is optimizing bookings in Los Angeles.</p>
+            </div>
           </div>
 
           {/* Upcoming Appointments */}
           <div className="bg-white dark:bg-[#152e2e] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex-1">
             <div className="p-6 border-b border-gray-50 dark:border-gray-800">
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Next Up</h2>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Next Up</h2>
             </div>
             <div className="p-4 space-y-3">
-                {appointments.map((apt) => (
-                    <div key={apt.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
-                        apt.isToday 
-                        ? 'bg-lavender-light dark:bg-primary/5 border-transparent hover:border-primary/20' 
-                        : 'bg-white dark:bg-transparent border-gray-100 dark:border-gray-700 opacity-75'
-                    }`}>
-                        <div className="text-center min-w-[3rem]">
-                            <div className={`text-xs font-bold uppercase ${apt.isToday ? 'text-primary' : 'text-slate-400'}`}>{apt.dayLabel}</div>
-                            <div className="text-lg font-bold text-slate-900 dark:text-white">{apt.time}</div>
-                        </div>
-                        <div className="h-8 w-px bg-slate-200 dark:bg-gray-700"></div>
-                        <div>
-                            <p className="font-semibold text-slate-800 dark:text-white text-sm">{apt.name}</p>
-                            <p className="text-xs text-slate-500">{apt.service}</p>
-                        </div>
-                    </div>
-                ))}
+              {appointments.map((apt) => (
+                <div key={apt.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${apt.isToday
+                    ? 'bg-lavender-light dark:bg-primary/5 border-transparent hover:border-primary/20'
+                    : 'bg-white dark:bg-transparent border-gray-100 dark:border-gray-700 opacity-75'
+                  }`}>
+                  <div className="text-center min-w-[3rem]">
+                    <div className={`text-xs font-bold uppercase ${apt.isToday ? 'text-primary' : 'text-slate-400'}`}>{apt.dayLabel}</div>
+                    <div className="text-lg font-bold text-slate-900 dark:text-white">{apt.time}</div>
+                  </div>
+                  <div className="h-8 w-px bg-slate-200 dark:bg-gray-700"></div>
+                  <div>
+                    <p className="font-semibold text-slate-800 dark:text-white text-sm">{apt.name}</p>
+                    <p className="text-xs text-slate-500">{apt.service}</p>
+                  </div>
+                </div>
+              ))}
             </div>
             <div className="px-6 pb-6 pt-2">
-                <button className="w-full py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-semibold text-slate-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                    View Calendar
-                </button>
+              <button className="w-full py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-semibold text-slate-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                View Calendar
+              </button>
             </div>
           </div>
         </div>
@@ -174,33 +188,33 @@ const Dashboard: React.FC = () => {
 };
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
-    let classes = "";
-    let icon = "";
-    
-    switch (status) {
-        case 'AI Handling':
-            classes = "bg-primary/10 text-primary-dark dark:text-primary";
-            icon = "smart_toy";
-            break;
-        case 'Booked':
-            classes = "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400";
-            icon = "check_circle";
-            break;
-        case 'Human Intervention Needed':
-            classes = "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30";
-            icon = "person";
-            break;
-        case 'AI Resolved':
-            classes = "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
-            icon = "done_all";
-            break;
-    }
+  let classes = "";
+  let icon = "";
 
-    return (
-        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${classes}`}>
-             <span className={`material-symbols-outlined text-[12px] ${status === 'AI Handling' ? 'animate-pulse' : ''}`}>{icon}</span> {status}
-        </span>
-    );
+  switch (status) {
+    case 'AI Handling':
+      classes = "bg-primary/10 text-primary-dark dark:text-primary";
+      icon = "smart_toy";
+      break;
+    case 'Booked':
+      classes = "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400";
+      icon = "check_circle";
+      break;
+    case 'Human Intervention Needed':
+      classes = "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30";
+      icon = "person";
+      break;
+    case 'AI Resolved':
+      classes = "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
+      icon = "done_all";
+      break;
+  }
+
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${classes}`}>
+      <span className={`material-symbols-outlined text-[12px] ${status === 'AI Handling' ? 'animate-pulse' : ''}`}>{icon}</span> {status}
+    </span>
+  );
 };
 
 export default Dashboard;
