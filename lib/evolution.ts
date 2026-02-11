@@ -8,6 +8,14 @@ const validateConfig = () => {
     if (!API_KEY || API_KEY === 'undefined' || API_KEY === '') {
         throw new Error('Configuração ausente: VITE_EVOLUTION_API_KEY não foi encontrado nas variáveis de ambiente.');
     }
+
+    // Masked logging for debugging (only in development or if explicitly needed)
+    console.log('API Config Check:', {
+        url: API_URL,
+        keyLength: API_KEY?.length,
+        keyStart: API_KEY?.substring(0, 3) + '...',
+        keyEnd: '...' + API_KEY?.substring(API_KEY.length - 3)
+    });
 };
 
 export interface EvolutionInstance {
