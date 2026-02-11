@@ -18,6 +18,10 @@ const WhatsAppConnect: React.FC = () => {
       const createRes = await evolution.createInstance(name);
       console.log('Create response:', createRes);
 
+      if (!createRes._debug?.ok) {
+        throw new Error(`Falha ao configurar instância. Detalhes: ${JSON.stringify(createRes._debug || createRes, null, 2)}`);
+      }
+
       console.log('Fetching QR for:', name);
       const data = await evolution.connectInstance(name);
       console.log('Connect response:', data);
@@ -33,17 +37,14 @@ const WhatsAppConnect: React.FC = () => {
         setStatus('connected');
       } else {
         const debugInfo = {
-          url: data.url,
-          status: data.status,
-          error: data.error,
-          textSample: data.text?.substring(0, 300)
+          apiResponse: data,
+          _debug: data._debug
         };
         throw new Error(`QR Code não encontrado. Detalhes: ${JSON.stringify(debugInfo, null, 2)}`);
       }
     } catch (err: any) {
       console.error('Error fetching QR:', err);
-      let msg = err.message || 'Erro ao conectar.';
-      setErrorMsg(msg);
+      setErrorMsg(err.message || 'Erro ao conectar.');
       setStatus('error');
     }
   }, []);
@@ -52,7 +53,7 @@ const WhatsAppConnect: React.FC = () => {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const name = `user_${user.id.substring(0, 8)} `;
+        const name = `user_${user.id.substring(0, 8)}`;
         setInstanceName(name);
 
         try {
