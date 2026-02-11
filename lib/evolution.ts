@@ -1,13 +1,14 @@
 const API_URL = import.meta.env.VITE_EVOLUTION_API_URL?.replace(/\/$/, '');
 const API_KEY = import.meta.env.VITE_EVOLUTION_API_KEY;
 
-// Validation at load time
-if (!API_URL || API_URL.includes('undefined')) {
-    console.error('❌ VITE_EVOLUTION_API_URL não está definido ou está incorreto no arquivo .env');
-}
-if (!API_KEY) {
-    console.error('❌ VITE_EVOLUTION_API_KEY não está definido no arquivo .env');
-}
+const validateConfig = () => {
+    if (!API_URL || API_URL === 'undefined' || API_URL === '') {
+        throw new Error('Configuração ausente: VITE_EVOLUTION_API_URL não foi encontrado nas variáveis de ambiente.');
+    }
+    if (!API_KEY || API_KEY === 'undefined' || API_KEY === '') {
+        throw new Error('Configuração ausente: VITE_EVOLUTION_API_KEY não foi encontrado nas variáveis de ambiente.');
+    }
+};
 
 export interface EvolutionInstance {
     instanceName: string;
@@ -38,6 +39,7 @@ const getHeaders = () => ({
 
 export const evolution = {
     async getInstances() {
+        validateConfig();
         const response = await fetch(`${API_URL}/instance/fetchInstances`, {
             headers: getHeaders()
         });
@@ -45,6 +47,7 @@ export const evolution = {
     },
 
     async createInstance(instanceName: string) {
+        validateConfig();
         const response = await fetch(`${API_URL}/instance/create`, {
             method: 'POST',
             headers: {
@@ -62,6 +65,7 @@ export const evolution = {
     },
 
     async connectInstance(instanceName: string) {
+        validateConfig();
         const response = await fetch(`${API_URL}/instance/connect/${instanceName}`, {
             headers: getHeaders()
         });
@@ -70,12 +74,13 @@ export const evolution = {
 
     async getInstanceStatus(instanceName: string) {
         try {
+            validateConfig();
             const response = await fetch(`${API_URL}/instance/connectionState/${instanceName}`, {
                 headers: getHeaders()
             });
             return handleResponse(response);
-        } catch {
-            return { instance: { state: 'disconnected' } };
+        } catch (err: any) {
+            return { instance: { state: 'disconnected' }, error: err.message };
         }
     },
 
