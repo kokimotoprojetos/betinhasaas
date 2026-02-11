@@ -41,7 +41,10 @@ const WhatsAppConnect: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Error fetching QR:', err);
-      setErrorMsg(err.message || 'Erro ao conectar. Verifique o console.');
+      let msg = err.message || 'Erro ao conectar.';
+      if (err.url) msg += `\nURL: ${err.url}`;
+      if (err.status) msg += `\nStatus: ${err.status}`;
+      setErrorMsg(msg);
       setStatus('error');
     }
   }, []);

@@ -1,6 +1,14 @@
 const API_URL = import.meta.env.VITE_EVOLUTION_API_URL;
 const API_KEY = import.meta.env.VITE_EVOLUTION_API_KEY;
 
+// Validation at load time
+if (!API_URL || API_URL.includes('undefined')) {
+    console.error('❌ VITE_EVOLUTION_API_URL não está definido ou está incorreto no arquivo .env');
+}
+if (!API_KEY) {
+    console.error('❌ VITE_EVOLUTION_API_KEY não está definido no arquivo .env');
+}
+
 export interface EvolutionInstance {
     instanceName: string;
     owner?: string;
@@ -13,7 +21,13 @@ const handleResponse = async (response: Response) => {
     try {
         return text ? JSON.parse(text) : { success: response.ok };
     } catch (e) {
-        return { success: response.ok, error: 'Invalid JSON', text };
+        return {
+            success: response.ok,
+            error: 'Dados inválidos recebidos da API (Não é um JSON)',
+            status: response.status,
+            url: response.url,
+            text: text.substring(0, 200) // First 200 chars for debugging
+        };
     }
 };
 
