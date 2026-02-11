@@ -9,6 +9,24 @@ const WhatsAppConnect: React.FC = () => {
   const [timer, setTimer] = useState(40);
   const [instanceName, setInstanceName] = useState<string | null>(null);
 
+  const syncInstance = useCallback(async (name: string, instanceStatus: string = 'connecting') => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase
+        .from('whatsapp_instances')
+        .upsert({
+          user_id: user.id,
+          instance_name: name,
+          status: instanceStatus,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'instance_name' });
+    } catch (err) {
+      console.warn('Error syncing instance to DB:', err);
+    }
+  }, []);
+
   const fetchQRCode = useCallback(async (name: string) => {
     try {
       setStatus('loading');
@@ -21,6 +39,9 @@ const WhatsAppConnect: React.FC = () => {
       if (!createRes._debug?.ok) {
         throw new Error(`Falha ao configurar instância. Detalhes: ${JSON.stringify(createRes._debug || createRes, null, 2)}`);
       }
+
+      // Sync to our DB for n8n
+      await syncInstance(name, 'connecting');
 
       console.log('Fetching QR for:', name);
       const data = await evolution.connectInstance(name);
@@ -35,6 +56,7 @@ const WhatsAppConnect: React.FC = () => {
         setTimer(40);
       } else if (data.instance?.state === 'open' || data.state === 'open') {
         setStatus('connected');
+        await syncInstance(name, 'connected');
       } else {
         const debugInfo = {
           apiResponse: data,
@@ -47,7 +69,7 @@ const WhatsAppConnect: React.FC = () => {
       setErrorMsg(err.message || 'Erro ao conectar.');
       setStatus('error');
     }
-  }, []);
+  }, [syncInstance]);
 
   useEffect(() => {
     async function init() {
@@ -59,8 +81,11 @@ const WhatsAppConnect: React.FC = () => {
         try {
           const state = await evolution.getInstanceStatus(name);
           console.log('Initial status:', state);
-          if (state.instance?.state === 'open' || state.state === 'open') {
+          const isConnected = state.instance?.state === 'open' || state.state === 'open';
+
+          if (isConnected) {
             setStatus('connected');
+            await syncInstance(name, 'connected');
           } else {
             fetchQRCode(name);
           }
@@ -71,7 +96,7 @@ const WhatsAppConnect: React.FC = () => {
       }
     }
     init();
-  }, [fetchQRCode]);
+  }, [fetchQRCode, syncInstance]);
 
   useEffect(() => {
     let interval: any;
