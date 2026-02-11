@@ -1,14 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { googleCalendar } from '../lib/googleCalendar';
 
 const Appointments: React.FC = () => {
     const [isConnected, setIsConnected] = useState(false);
     const [loading, setLoading] = useState(true);
     const [events, setEvents] = useState<any[]>([]);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         checkConnection();
     }, []);
+
+    const fetchEvents = async (userId: string) => {
+        try {
+            const data = await googleCalendar.getEvents(userId);
+            setEvents(data.items || []);
+        } catch (err: any) {
+            console.error('Error fetching events:', err);
+            if (err.message.includes('Unauthorized')) {
+                setIsConnected(false); // Force reconnect if token is dead
+            }
+            // Fallback to mock for UI dev if desired, or show error
+            // setError(err.message);
+        }
+    };
 
     const checkConnection = async () => {
         try {
@@ -39,13 +55,10 @@ const Appointments: React.FC = () => {
                         updated_at: new Date().toISOString()
                     });
                 setIsConnected(true);
+                await fetchEvents(user.id);
             } else if (existingConfig && existingConfig.is_enabled) {
                 setIsConnected(true);
-                // Mock events for UI demonstration
-                setEvents([
-                    { id: '1', summary: 'Corte de Cabelo - João Silva', start: { dateTime: new Date(Date.now() + 3600000).toISOString() }, status: 'confirmed' },
-                    { id: '2', summary: 'Barba e Pigmentação - Pedro G.', start: { dateTime: new Date(Date.now() + 7200000).toISOString() }, status: 'confirmed' }
-                ]);
+                await fetchEvents(user.id);
             }
         } catch (err) {
             console.error('Error checking connection:', err);
@@ -139,29 +152,39 @@ const Appointments: React.FC = () => {
                                 <button onClick={handleConnect} className="text-primary font-bold hover:underline">Configurar Agora</button>
                             </div>
                         ) : (
-                            <div className="flex-grow grid grid-cols-7 gap-px bg-slate-100 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden">
-                                {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map(day => (
-                                    <div key={day} className="bg-slate-50 dark:bg-slate-900/50 p-2 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                        {day}
+                            <div className="flex-grow overflow-y-auto">
+                                {events.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full py-12 text-slate-400">
+                                        <span className="material-symbols-outlined text-4xl mb-2">calendar_today</span>
+                                        <p>Nenhum compromisso encontrado para os próximos dias.</p>
                                     </div>
-                                ))}
-                                {Array.from({ length: 35 }).map((_, i) => (
-                                    <div key={i} className="bg-white dark:bg-surface-dark min-h-[80px] p-2 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors cursor-pointer group relative">
-                                        <span className={`text-xs font-medium ${i + 1 === 11 ? 'bg-primary text-white w-5 h-5 flex items-center justify-center rounded-full' : 'text-slate-400'}`}>
-                                            {i + 1 > 31 ? (i + 1) % 31 : i + 1}
-                                        </span>
-                                        {i + 1 === 11 && (
-                                            <div className="mt-1 space-y-1">
-                                                <div className="text-[10px] bg-primary/10 text-primary-dark dark:text-primary p-1 rounded border border-primary/20 truncate">
-                                                    10:00 - Corte
+                                ) : (
+                                    <div className="space-y-3 p-2">
+                                        {events.map((event) => (
+                                            <div key={event.id} className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 group hover:border-primary/30 transition-all">
+                                                <div className="text-center min-w-[3rem]">
+                                                    <div className="text-[10px] font-bold uppercase text-primary">
+                                                        {new Date(event.start.dateTime || event.start.date).toLocaleDateString('pt-BR', { weekday: 'short' })}
+                                                    </div>
+                                                    <div className="text-xl font-bold text-slate-800 dark:text-white">
+                                                        {new Date(event.start.dateTime || event.start.date).getDate()}
+                                                    </div>
                                                 </div>
-                                                <div className="text-[10px] bg-primary/10 text-primary-dark dark:text-primary p-1 rounded border border-primary/20 truncate">
-                                                    14:30 - Barba
+                                                <div className="h-10 w-px bg-slate-200 dark:bg-slate-800"></div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="font-bold text-slate-800 dark:text-white truncate">{event.summary || '(Sem título)'}</h4>
+                                                    <p className="text-xs text-slate-500 flex items-center gap-1">
+                                                        <span className="material-symbols-outlined text-[14px]">schedule</span>
+                                                        {new Date(event.start.dateTime || event.start.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                                    </p>
                                                 </div>
+                                                {event.status === 'confirmed' && (
+                                                    <span className="material-symbols-outlined text-emerald-500 text-[20px]">check_circle</span>
+                                                )}
                                             </div>
-                                        )}
+                                        ))}
                                     </div>
-                                ))}
+                                )}
                             </div>
                         )}
                     </div>
