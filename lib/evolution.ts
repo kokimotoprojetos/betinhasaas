@@ -8,13 +8,21 @@ export interface EvolutionInstance {
     status: 'open' | 'close' | 'connecting';
 }
 
+const handleResponse = async (response: Response) => {
+    const text = await response.text();
+    try {
+        return text ? JSON.parse(text) : { success: response.ok };
+    } catch (e) {
+        return { success: response.ok, error: 'Invalid JSON', text };
+    }
+};
+
 export const evolution = {
     async getInstances() {
         const response = await fetch(`${API_URL}/instance/fetchInstances`, {
             headers: { 'apikey': API_KEY }
         });
-        if (!response.ok) throw new Error('Failed to fetch instances');
-        return response.json();
+        return handleResponse(response);
     },
 
     async createInstance(instanceName: string) {
@@ -31,17 +39,14 @@ export const evolution = {
                 integration: 'WHATSAPP-BAILEYS'
             })
         });
-        // If instance already exists, it might return 403 or success message
-        const data = await response.json();
-        return data;
+        return handleResponse(response);
     },
 
     async connectInstance(instanceName: string) {
         const response = await fetch(`${API_URL}/instance/connect/${instanceName}`, {
             headers: { 'apikey': API_KEY }
         });
-        if (!response.ok) throw new Error('Failed to connect instance');
-        return response.json(); // Usually returns base64 QR
+        return handleResponse(response);
     },
 
     async getInstanceStatus(instanceName: string) {
@@ -49,8 +54,7 @@ export const evolution = {
             const response = await fetch(`${API_URL}/instance/connectionState/${instanceName}`, {
                 headers: { 'apikey': API_KEY }
             });
-            if (!response.ok) return { instance: { state: 'disconnected' } };
-            return response.json();
+            return handleResponse(response);
         } catch {
             return { instance: { state: 'disconnected' } };
         }
@@ -61,6 +65,6 @@ export const evolution = {
             method: 'DELETE',
             headers: { 'apikey': API_KEY }
         });
-        return response.json();
+        return handleResponse(response);
     }
 };
