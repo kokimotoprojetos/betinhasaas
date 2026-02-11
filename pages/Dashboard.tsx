@@ -6,43 +6,34 @@ import { supabase } from '../lib/supabase';
 const Dashboard: React.FC = () => {
   const [aiActive, setAiActive] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    async function getInitialData() {
+      const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
-    });
+
+      if (user) {
+        const [convs, apts] = await Promise.all([
+          supabase.from('conversations').select('*').order('created_at', { ascending: false }).limit(5),
+          supabase.from('appointments').select('*').order('time', { ascending: true })
+        ]);
+
+        if (convs.data) setConversations(convs.data as any);
+        if (apts.data) setAppointments(apts.data as any);
+      }
+      setLoading(false);
+    }
+    getInitialData();
   }, []);
 
   const metrics: Metric[] = [
-    { label: 'Total Appointments', value: '42', trend: '+12%', trendUp: true, subtext: 'this week', icon: 'calendar_today' },
-    { label: 'AI Response Rate', value: '95%', trend: 'High', trendUp: false, progress: 95, icon: 'smart_toy' },
-    { label: 'Customer Satisfaction', value: '4.8', icon: 'sentiment_satisfied' },
-    { label: 'Peak AI Activity', value: '6 PM', subtext: 'Yesterday', icon: 'schedule' },
-  ];
-
-  const conversations: Conversation[] = [
-    {
-      id: '1', name: 'Sarah Jenkins', avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBJrBjjYtMGDr6f8Muv9JSVTfe3c51sl0clzDzdVclIUOiZrhBWc_QHApwMj6EwJnlvZidQLculb1sIypcW_WeA6eUysaPS5TgGH61_gkiq3DNPkghHnTVOMwQbJlINbg-UsD5VgtF7WFhIKLMGSnEx6u0ssKYC7vBe3VDBLN0eubpdtxfYtH20oJJ-ULcfY1oWqvo6d1TxW7MfpSQg90XS9tL4HYaGOGFHD7NWnaC4eJPWgyhBGt1g5QHJh_C1xoRpmjTVmK9c2q0M',
-      time: '2m ago', message: 'Do you have any availability for a balayage this Friday?', status: 'AI Handling', isOnline: true
-    },
-    {
-      id: '2', name: 'Mike Thomas', avatar: '', initials: 'MT', initialsColor: 'orange',
-      time: '15m ago', message: 'Great, confirmed for 2 PM. See you then!', status: 'Booked'
-    },
-    {
-      id: '3', name: 'Jessica Alva', avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCBZ054eHqqId5GkP3GBf6MjZTftfejCHRduX8RqCfWO_DjLp1p9IndvBaNfdsoHiI6neblmvFjQQ6F5fP6BdLf0rrGdHJAXXIahk1qLWKXiWA6YLMXDQeQjVocqPz9AgIKQ_HFt1KjQVnvoOeTb1ctvKuvtedIPwGj7dNbJlYMxfJ2dCPYJnCrU2Uncl0RcdLBN0b6yiF9BPy0-qtOBtm0U_KmNAkk8ifLtwBe5a-VMcRMiqHmhVLivYgmDCK2VDR9S8WYoFn3nyVO',
-      time: '1h ago', message: "I'm not sure if I want the gel or acrylic...", status: 'Human Intervention Needed'
-    },
-    {
-      id: '4', name: 'Katy Adams', avatar: '', initials: 'KA', initialsColor: 'purple',
-      time: '3h ago', message: 'Can you send me the address again?', status: 'AI Resolved'
-    },
-  ];
-
-  const appointments: Appointment[] = [
-    { id: '1', name: 'Mike Thomas', service: "Men's Cut & Style", time: '14:00', dayLabel: 'TODAY', isToday: true },
-    { id: '2', name: 'Emily R.', service: 'Manicure', time: '15:30', dayLabel: 'TODAY', isToday: true },
-    { id: '3', name: 'Alice Wong', service: 'Full Color', time: '09:00', dayLabel: 'TMRW', isToday: false },
+    { label: 'Total Appointments', value: appointments.length.toString(), trend: '+0%', trendUp: true, subtext: 'this week', icon: 'calendar_today' },
+    { label: 'AI Response Rate', value: '0%', trend: '-', trendUp: false, progress: 0, icon: 'smart_toy' },
+    { label: 'Customer Satisfaction', value: 'N/A', icon: 'sentiment_satisfied' },
+    { label: 'Peak AI Activity', value: '-', subtext: 'N/A', icon: 'schedule' },
   ];
 
   const getGreeting = () => {
@@ -50,6 +41,14 @@ const Dashboard: React.FC = () => {
     if (hour < 12) return 'Bom dia';
     if (hour < 18) return 'Boa tarde';
     return 'Boa noite';
+  }
+
+  if (loading) {
+    return (
+      <div className="p-8 flex justify-center items-center h-64">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
   return (
@@ -69,18 +68,18 @@ const Dashboard: React.FC = () => {
               <span className={`relative inline-flex rounded-full h-3 w-3 ${aiActive ? 'bg-green-500' : 'bg-gray-400'}`}></span>
             </span>
             <span className={`text-sm font-medium ${aiActive ? 'text-green-700 dark:text-green-400' : 'text-gray-500'}`}>
-              {aiActive ? 'WhatsApp Active' : 'AI Paused'}
+              {aiActive ? 'WhatsApp Conectado' : 'IA Pausada'}
             </span>
           </div>
           <button
             onClick={() => setAiActive(!aiActive)}
             className={`font-semibold px-5 py-2.5 rounded-xl shadow-lg transition-all flex items-center gap-2 text-sm ${aiActive
-                ? 'bg-primary hover:bg-primary-dark text-white dark:text-background-dark shadow-primary/20'
-                : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+              ? 'bg-primary hover:bg-primary-dark text-white dark:text-background-dark shadow-primary/20'
+              : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
               }`}
           >
             <span className="material-symbols-outlined text-[1.25rem]">{aiActive ? 'pause_circle' : 'play_circle'}</span>
-            {aiActive ? 'Pause AI' : 'Resume AI'}
+            {aiActive ? 'Pausar IA' : 'Ativar IA'}
           </button>
         </div>
       </div>
@@ -100,12 +99,12 @@ const Dashboard: React.FC = () => {
             <div className="p-6 border-b border-gray-50 dark:border-gray-800 flex justify-between items-center">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary">forum</span>
-                Recent Conversations
+                Conversas Recentes
               </h2>
-              <button className="text-sm text-primary font-semibold hover:text-primary-dark dark:hover:text-primary/80">View All</button>
+              <button className="text-sm text-primary font-semibold hover:text-primary-dark dark:hover:text-primary/80">Ver Tudo</button>
             </div>
             <div className="divide-y divide-gray-50 dark:divide-gray-800">
-              {conversations.map((chat) => (
+              {conversations.length > 0 ? conversations.map((chat) => (
                 <div key={chat.id} className="p-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer group">
                   <div className="flex items-start gap-4">
                     <div className="relative">
@@ -115,7 +114,7 @@ const Dashboard: React.FC = () => {
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${chat.initialsColor === 'orange' ? 'bg-orange-100 text-orange-600' :
                             chat.initialsColor === 'purple' ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-600'
                           }`}>
-                          {chat.initials}
+                          {chat.initials || chat.name.charAt(0)}
                         </div>
                       )}
                       {chat.isOnline && <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>}
@@ -132,33 +131,36 @@ const Dashboard: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="p-12 text-center">
+                  <div className="w-16 h-16 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
+                    <span className="material-symbols-outlined text-slate-300 text-3xl">chat_bubble_outline</span>
+                  </div>
+                  <p className="text-slate-500 dark:text-gray-400">Nenhuma conversa ainda.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* Sidebar Right */}
         <div className="flex flex-col gap-6">
-          {/* Map */}
+          {/* Performance Card */}
           <div className="bg-white dark:bg-[#152e2e] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden relative group h-48">
-            <img
-              alt="Map showing salon location"
-              className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOctAOqRyeMEHoaUf7h0H3Mz6hbeMi-1_HHfT46GXxy5xS3kWXPdDm6OJ76Xf3NWHoQtThvTG4O7Ij1vxbMkAvoLT51MUl0bEBcCmUQFElccKFqB0U_cH2YFQzNlMCCm094aaZa1IkY8T9NN_wWCgE-Uv9-fABR8FzrMKiM3RqAe4EXtC_kmLg4YfwKHFrZWasT5ykDUB_SYbDmOGuowVdN-QJQOvR0wwxkDgVNpIRgWHAP-HrgCZ5C8MFk2ar2Yg6zt89dacWdi3P"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex flex-col justify-end p-6">
-              <h3 className="text-white font-bold text-lg">Salon Performance</h3>
-              <p className="text-white/80 text-sm">Your AI is optimizing bookings in Los Angeles.</p>
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5 dark:from-primary/10 dark:to-transparent"></div>
+            <div className="absolute inset-0 flex flex-col justify-end p-6">
+              <h3 className="text-slate-900 dark:text-white font-bold text-lg leading-tight">Saúde da sua IA</h3>
+              <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">Conecte seu WhatsApp para começar a capturar leads.</p>
             </div>
           </div>
 
           {/* Upcoming Appointments */}
           <div className="bg-white dark:bg-[#152e2e] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex-1">
             <div className="p-6 border-b border-gray-50 dark:border-gray-800">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Next Up</h2>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Próximos Agendamentos</h2>
             </div>
             <div className="p-4 space-y-3">
-              {appointments.map((apt) => (
+              {appointments.length > 0 ? appointments.map((apt) => (
                 <div key={apt.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${apt.isToday
                     ? 'bg-lavender-light dark:bg-primary/5 border-transparent hover:border-primary/20'
                     : 'bg-white dark:bg-transparent border-gray-100 dark:border-gray-700 opacity-75'
@@ -173,11 +175,16 @@ const Dashboard: React.FC = () => {
                     <p className="text-xs text-slate-500">{apt.service}</p>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="py-10 text-center">
+                  <span className="material-symbols-outlined text-slate-300 text-4xl mb-2">calendar_today</span>
+                  <p className="text-sm text-slate-500">Sem agendamentos hoje.</p>
+                </div>
+              )}
             </div>
             <div className="px-6 pb-6 pt-2">
               <button className="w-full py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-semibold text-slate-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                View Calendar
+                Ver Calendário
               </button>
             </div>
           </div>
@@ -208,6 +215,9 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
       classes = "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
       icon = "done_all";
       break;
+    default:
+      classes = "bg-slate-100 text-slate-600";
+      icon = "more_horiz";
   }
 
   return (
