@@ -35,13 +35,24 @@ const handleResponse = async (response: Response) => {
     }
 
     // Always return an object with debug info
+    // We add more info if it's a 401 to help the user verify their key
+    const debug: any = {
+        status: response.status,
+        url: response.url,
+        ok: response.ok
+    };
+
+    if (response.status === 401) {
+        debug.keyCheck = {
+            length: API_KEY?.length || 0,
+            start: API_KEY?.substring(0, 3) + '...',
+            end: '...' + API_KEY?.substring(Math.max(0, (API_KEY?.length || 0) - 3))
+        };
+    }
+
     return {
         ...(typeof data === 'object' && data !== null ? data : { data }),
-        _debug: {
-            status: response.status,
-            url: response.url,
-            ok: response.ok
-        }
+        _debug: debug
     };
 };
 
