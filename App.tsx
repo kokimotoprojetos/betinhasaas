@@ -21,8 +21,28 @@ const App: React.FC = () => {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
+
+      // Global capture of Google tokens
+      if (session?.provider_token && session?.user) {
+        console.log('Capturing Google tokens globally...');
+        const providerToken = session.provider_token;
+        const providerRefreshToken = session.provider_refresh_token;
+
+        // Save to DB
+        await supabase
+          .from('google_calendar_configs')
+          .upsert({
+            user_id: session.user.id,
+            access_token: providerToken,
+            refresh_token: providerRefreshToken, // session usually only has this on first login
+            is_enabled: true,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
+
+        console.log('Google tokens saved!');
+      }
     });
 
     return () => subscription.unsubscribe();

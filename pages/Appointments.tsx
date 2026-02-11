@@ -33,30 +33,13 @@ const Appointments: React.FC = () => {
             const user = session?.user;
             if (!user) return;
 
-            // Check if we have provider tokens in the session (returned from OAuth)
-            const providerToken = session?.provider_token;
-            const providerRefreshToken = session?.provider_refresh_token;
-
             const { data: existingConfig } = await supabase
                 .from('google_calendar_configs')
                 .select('*')
                 .eq('user_id', user.id)
                 .single();
 
-            // If we just got tokens from OAuth, save them
-            if (providerToken && (!existingConfig || !existingConfig.access_token)) {
-                await supabase
-                    .from('google_calendar_configs')
-                    .upsert({
-                        user_id: user.id,
-                        access_token: providerToken,
-                        refresh_token: providerRefreshToken || existingConfig?.refresh_token,
-                        is_enabled: true,
-                        updated_at: new Date().toISOString()
-                    });
-                setIsConnected(true);
-                await fetchEvents(user.id);
-            } else if (existingConfig && existingConfig.is_enabled) {
+            if (existingConfig && existingConfig.is_enabled) {
                 setIsConnected(true);
                 await fetchEvents(user.id);
             }
@@ -72,7 +55,7 @@ const Appointments: React.FC = () => {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: window.location.origin + window.location.pathname,
+                    redirectTo: window.location.origin + '/#/appointments',
                     scopes: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly',
                     queryParams: {
                         access_type: 'offline',
