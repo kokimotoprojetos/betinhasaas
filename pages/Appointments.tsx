@@ -13,16 +13,33 @@ const Appointments: React.FC = () => {
     const checkConnection = async () => {
         try {
             setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { session } } = await supabase.auth.getSession();
+            const user = session?.user;
             if (!user) return;
 
-            const { data, error } = await supabase
+            // Check if we have provider tokens in the session (returned from OAuth)
+            const providerToken = session?.provider_token;
+            const providerRefreshToken = session?.provider_refresh_token;
+
+            const { data: existingConfig } = await supabase
                 .from('google_calendar_configs')
                 .select('*')
                 .eq('user_id', user.id)
                 .single();
 
-            if (data && data.is_enabled) {
+            // If we just got tokens from OAuth, save them
+            if (providerToken && (!existingConfig || !existingConfig.access_token)) {
+                await supabase
+                    .from('google_calendar_configs')
+                    .upsert({
+                        user_id: user.id,
+                        access_token: providerToken,
+                        refresh_token: providerRefreshToken || existingConfig?.refresh_token,
+                        is_enabled: true,
+                        updated_at: new Date().toISOString()
+                    });
+                setIsConnected(true);
+            } else if (existingConfig && existingConfig.is_enabled) {
                 setIsConnected(true);
                 // Mock events for UI demonstration
                 setEvents([
@@ -37,11 +54,24 @@ const Appointments: React.FC = () => {
         }
     };
 
-    const handleConnect = () => {
-        // In a real app, this would redirect to Google OAuth
-        alert('Redirecionando para autenticação do Google... (Funcionalidade em desenvolvimento)');
-        // For demo: set to connected
-        // setIsConnected(true);
+    const handleConnect = async () => {
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: window.location.origin + window.location.pathname,
+                    scopes: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly',
+                    queryParams: {
+                        access_type: 'offline',
+                        prompt: 'consent',
+                    }
+                }
+            });
+            if (error) throw error;
+        } catch (err: any) {
+            console.error('Error connecting to Google:', err);
+            alert('Erro ao conectar com Google: ' + err.message);
+        }
     };
 
     if (loading) {
