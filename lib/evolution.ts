@@ -13,6 +13,7 @@ export const evolution = {
         const response = await fetch(`${API_URL}/instance/fetchInstances`, {
             headers: { 'apikey': API_KEY }
         });
+        if (!response.ok) throw new Error('Failed to fetch instances');
         return response.json();
     },
 
@@ -25,25 +26,34 @@ export const evolution = {
             },
             body: JSON.stringify({
                 instanceName,
-                token: instanceName, // Using name as token for simplicity in this flow
-                qrcode: true
+                token: instanceName,
+                qrcode: true,
+                integration: 'WHATSAPP-BAILEYS'
             })
         });
-        return response.json();
+        // If instance already exists, it might return 403 or success message
+        const data = await response.json();
+        return data;
     },
 
     async connectInstance(instanceName: string) {
         const response = await fetch(`${API_URL}/instance/connect/${instanceName}`, {
             headers: { 'apikey': API_KEY }
         });
+        if (!response.ok) throw new Error('Failed to connect instance');
         return response.json(); // Usually returns base64 QR
     },
 
     async getInstanceStatus(instanceName: string) {
-        const response = await fetch(`${API_URL}/instance/connectionState/${instanceName}`, {
-            headers: { 'apikey': API_KEY }
-        });
-        return response.json();
+        try {
+            const response = await fetch(`${API_URL}/instance/connectionState/${instanceName}`, {
+                headers: { 'apikey': API_KEY }
+            });
+            if (!response.ok) return { instance: { state: 'disconnected' } };
+            return response.json();
+        } catch {
+            return { instance: { state: 'disconnected' } };
+        }
     },
 
     async logoutInstance(instanceName: string) {

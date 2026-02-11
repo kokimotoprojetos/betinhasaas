@@ -4,25 +4,37 @@ import { evolution } from '../lib/evolution';
 
 const WhatsAppConnect: React.FC = () => {
   const [qrCode, setQrCode] = useState<string | null>(null);
-  const [status, setStatus] = useState<'idle' | 'loading' | 'connecting' | 'connected' | 'expired'>('idle');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'connecting' | 'connected' | 'expired' | 'error'>('idle');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [timer, setTimer] = useState(40);
   const [instanceName, setInstanceName] = useState<string | null>(null);
 
   const fetchQRCode = useCallback(async (name: string) => {
     try {
       setStatus('loading');
-      // Ensure instance exists or create it
-      await evolution.createInstance(name);
+      setErrorMsg(null);
 
+      console.log('Creating/Updating instance:', name);
+      const createRes = await evolution.createInstance(name);
+      console.log('Create response:', createRes);
+
+      console.log('Fetching QR for:', name);
       const data = await evolution.connectInstance(name);
+      console.log('Connect response keys:', Object.keys(data));
+
       if (data.base64) {
         setQrCode(data.base64);
         setStatus('connecting');
         setTimer(40);
+      } else if (data.instance?.state === 'open') {
+        setStatus('connected');
+      } else {
+        throw new Error('QR Code não retornado pela API. Tente recarregar.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching QR:', err);
-      setStatus('expired');
+      setErrorMsg(err.message || 'Erro ao conectar. Verifique o console.');
+      setStatus('error');
     }
   }, []);
 
@@ -30,14 +42,19 @@ const WhatsAppConnect: React.FC = () => {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const name = `user_${user.id.substring(0, 8)}`;
+        const name = `user_${user.id.substring(0, 8)} `;
         setInstanceName(name);
 
-        // Check if already connected
-        const state = await evolution.getInstanceStatus(name);
-        if (state.instance?.state === 'open') {
-          setStatus('connected');
-        } else {
+        try {
+          const state = await evolution.getInstanceStatus(name);
+          console.log('Initial status:', state);
+          if (state.instance?.state === 'open' || state.state === 'open') {
+            setStatus('connected');
+          } else {
+            fetchQRCode(name);
+          }
+        } catch (e) {
+          console.error('Error checking status:', e);
           fetchQRCode(name);
         }
       }
@@ -51,11 +68,15 @@ const WhatsAppConnect: React.FC = () => {
       interval = setInterval(async () => {
         setTimer((t) => t - 1);
 
-        // Check connection status every 3 seconds
-        if (timer % 3 === 0 && instanceName) {
-          const state = await evolution.getInstanceStatus(instanceName);
-          if (state.instance?.state === 'open') {
-            setStatus('connected');
+        if (timer % 5 === 0 && instanceName) {
+          try {
+            const state = await evolution.getInstanceStatus(instanceName);
+            if (state.instance?.state === 'open' || state.state === 'open') {
+              setStatus('connected');
+              clearInterval(interval);
+            }
+          } catch (e) {
+            console.warn('Polling error:', e);
           }
         }
       }, 1000);
@@ -73,9 +94,9 @@ const WhatsAppConnect: React.FC = () => {
     <div className="flex-grow flex items-center justify-center p-4 sm:p-6 lg:p-8 animate-fade-in min-h-[calc(100vh-80px)]">
       <div className="w-full max-w-6xl">
         <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-6">
-          <span className="hover:text-primary cursor-pointer">Configurações</span>
+          <span className="hover:text-primary cursor-pointer text-slate-400">Configurações</span>
           <span className="material-symbols-outlined text-base">chevron_right</span>
-          <span className="hover:text-primary cursor-pointer">Integrações</span>
+          <span className="hover:text-primary cursor-pointer text-slate-400">Integrações</span>
           <span className="material-symbols-outlined text-base">chevron_right</span>
           <span className="text-slate-900 dark:text-white font-medium">Conexão WhatsApp</span>
         </div>
@@ -113,7 +134,7 @@ const WhatsAppConnect: React.FC = () => {
 
             <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700/50 flex items-center gap-2 text-xs text-slate-400 relative z-10">
               <span className="material-symbols-outlined text-sm text-emerald-500">lock</span>
-              <span>Conexão criptografada de ponta a ponta via Evolution API</span>
+              <span>Conexão segura e privada via Evolution API</span>
             </div>
           </div>
 
@@ -124,11 +145,11 @@ const WhatsAppConnect: React.FC = () => {
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-20">
                 <div className="bg-white dark:bg-surface-dark px-4 py-1.5 rounded-full shadow-lg border border-slate-100 dark:border-slate-700 flex items-center gap-2 whitespace-nowrap">
                   <div className="relative flex h-2.5 w-2.5">
-                    <span className={`absolute inline-flex h-full w-full rounded-full ${status === 'connected' ? 'bg-green-500' : 'bg-primary'} opacity-75 ${status === 'connecting' && 'animate-ping'}`}></span>
-                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${status === 'expired' ? 'bg-red-500' : status === 'connected' ? 'bg-green-500' : 'bg-primary'}`}></span>
+                    <span className={`absolute inline - flex h - full w - full rounded - full ${status === 'connected' ? 'bg-green-500' : 'bg-primary'} opacity - 75 ${(status === 'connecting' || status === 'loading') && 'animate-ping'} `}></span>
+                    <span className={`relative inline - flex rounded - full h - 2.5 w - 2.5 ${status === 'error' || status === 'expired' ? 'bg-red-500' : status === 'connected' ? 'bg-green-500' : 'bg-primary'} `}></span>
                   </div>
                   <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 tracking-wide uppercase">
-                    {status === 'connected' ? 'Conectado' : status === 'expired' ? 'Código Expirado' : status === 'loading' ? 'Gerando...' : 'Aguardando leitura...'}
+                    {status === 'connected' ? 'Conectado' : status === 'error' ? 'Erro' : status === 'expired' ? 'Expirado' : status === 'loading' ? 'Iniciando...' : 'Escaneie o código'}
                   </span>
                 </div>
               </div>
@@ -140,19 +161,33 @@ const WhatsAppConnect: React.FC = () => {
                       <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
                         <span className="material-symbols-outlined text-green-600 text-5xl">check_circle</span>
                       </div>
-                      <p className="font-bold text-slate-800">WhatsApp Conectado!</p>
-                      <p className="text-sm text-slate-500 text-center px-4">Sua IA já está pronta para atender seus clientes.</p>
+                      <p className="font-bold text-slate-800">Conectado!</p>
+                      <p className="text-sm text-slate-500 text-center px-4">Sua automação já está ativa.</p>
                     </div>
                   ) : (
                     <>
-                      {qrCode ? (
+                      {status === 'loading' && (
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                          <p className="text-sm font-semibold text-slate-500">Configurando Instância...</p>
+                        </div>
+                      )}
+
+                      {status === 'error' && (
+                        <div className="flex flex-col items-center gap-4 p-6 text-center">
+                          <span className="material-symbols-outlined text-red-500 text-5xl">error</span>
+                          <p className="font-bold text-slate-800">Falha na conexão</p>
+                          <p className="text-xs text-slate-500">{errorMsg}</p>
+                          <button onClick={handleReload} className="mt-2 text-primary font-bold text-sm underline">Tentar novamente</button>
+                        </div>
+                      )}
+
+                      {(status === 'connecting' || status === 'expired') && qrCode && (
                         <img
                           alt="WhatsApp Connection QR Code"
-                          className={`w-full h-full object-contain p-4 transition-opacity duration-300 ${status === 'expired' ? 'opacity-20 blur-sm' : 'opacity-100'}`}
+                          className={`w - full h - full object - contain p - 4 transition - opacity duration - 300 ${status === 'expired' ? 'opacity-20 blur-sm' : 'opacity-100'} `}
                           src={qrCode}
                         />
-                      ) : (
-                        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                       )}
 
                       {status === 'connecting' && <div className="scan-line z-10 pointer-events-none"></div>}
@@ -168,7 +203,7 @@ const WhatsAppConnect: React.FC = () => {
                           onClick={handleReload}
                         >
                           <span className="material-symbols-outlined text-4xl text-primary mb-2 animate-bounce">refresh</span>
-                          <span className="font-bold text-slate-800">Clique para recarregar</span>
+                          <span className="font-bold text-slate-800">Recarregar QR</span>
                         </div>
                       )}
                     </>
@@ -176,13 +211,13 @@ const WhatsAppConnect: React.FC = () => {
                 </div>
               </div>
 
-              {status !== 'connected' && (
+              {status !== 'connected' && status !== 'error' && status !== 'loading' && (
                 <div className="mt-6 flex flex-col items-center gap-3">
                   <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                    O código expira em <span className={`tabular-nums ${status === 'expired' ? 'text-red-500' : 'text-slate-900 dark:text-primary'}`}>{timer}s</span>
+                    O código expira em <span className={`tabular - nums ${status === 'expired' ? 'text-red-500' : 'text-slate-900 dark:text-primary'} `}>{timer}s</span>
                   </p>
                   <div className="w-48 h-1 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                    <div className="h-full bg-primary rounded-full transition-all duration-1000 ease-linear" style={{ width: `${(timer / 40) * 100}%` }}></div>
+                    <div className="h-full bg-primary rounded-full transition-all duration-1000 ease-linear" style={{ width: `${(timer / 40) * 100}% ` }}></div>
                   </div>
                 </div>
               )}
@@ -190,11 +225,10 @@ const WhatsAppConnect: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-8 text-center">
+        <div className="mt-8 text-center px-4">
           <p className="text-xs text-slate-400 dark:text-slate-600 max-w-2xl mx-auto">
-            Ao conectar sua conta do WhatsApp, você concorda com os Termos de Serviço da BeautyConnect AI.
-            Usamos estritamente o protocolo oficial do WhatsApp para garantir a segurança dos seus dados.
-            Nenhuma mensagem é armazenada em nossos servidores permanentemente.
+            Esta conexão é segura e segue todos os protocolos oficiais.
+            Sua privacidade é nossa prioridade.
           </p>
         </div>
       </div>
@@ -215,3 +249,4 @@ const StepItem: React.FC<{ icon: string; title: string; desc: React.ReactNode }>
 );
 
 export default WhatsAppConnect;
+```
