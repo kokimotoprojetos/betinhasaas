@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_EVOLUTION_API_URL;
+const API_URL = import.meta.env.VITE_EVOLUTION_API_URL?.replace(/\/$/, '');
 const API_KEY = import.meta.env.VITE_EVOLUTION_API_KEY;
 
 // Validation at load time
@@ -26,15 +26,20 @@ const handleResponse = async (response: Response) => {
             error: 'Dados inválidos recebidos da API (Não é um JSON)',
             status: response.status,
             url: response.url,
-            text: text.substring(0, 200) // First 200 chars for debugging
+            text: text // For debugging
         };
     }
 };
 
+const getHeaders = () => ({
+    'apikey': API_KEY,
+    'Accept': 'application/json'
+});
+
 export const evolution = {
     async getInstances() {
         const response = await fetch(`${API_URL}/instance/fetchInstances`, {
-            headers: { 'apikey': API_KEY }
+            headers: getHeaders()
         });
         return handleResponse(response);
     },
@@ -43,8 +48,8 @@ export const evolution = {
         const response = await fetch(`${API_URL}/instance/create`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'apikey': API_KEY
+                ...getHeaders(),
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 instanceName,
@@ -58,7 +63,7 @@ export const evolution = {
 
     async connectInstance(instanceName: string) {
         const response = await fetch(`${API_URL}/instance/connect/${instanceName}`, {
-            headers: { 'apikey': API_KEY }
+            headers: getHeaders()
         });
         return handleResponse(response);
     },
@@ -66,7 +71,7 @@ export const evolution = {
     async getInstanceStatus(instanceName: string) {
         try {
             const response = await fetch(`${API_URL}/instance/connectionState/${instanceName}`, {
-                headers: { 'apikey': API_KEY }
+                headers: getHeaders()
             });
             return handleResponse(response);
         } catch {
@@ -77,7 +82,7 @@ export const evolution = {
     async logoutInstance(instanceName: string) {
         const response = await fetch(`${API_URL}/instance/logout/${instanceName}`, {
             method: 'DELETE',
-            headers: { 'apikey': API_KEY }
+            headers: getHeaders()
         });
         return handleResponse(response);
     }
