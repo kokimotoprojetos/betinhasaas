@@ -20,16 +20,24 @@ const WhatsAppConnect: React.FC = () => {
 
       console.log('Fetching QR for:', name);
       const data = await evolution.connectInstance(name);
-      console.log('Connect response keys:', Object.keys(data));
+      console.log('Connect response:', data);
 
-      if (data.base64) {
-        setQrCode(data.base64);
+      // Try multiple property names for the QR code
+      const qrValue = data.base64 || data.qrcode?.base64 || (data.code?.startsWith('data:image') ? data.code : null);
+
+      if (qrValue) {
+        setQrCode(qrValue);
         setStatus('connecting');
         setTimer(40);
-      } else if (data.instance?.state === 'open') {
+      } else if (data.instance?.state === 'open' || data.state === 'open') {
         setStatus('connected');
+      } else if (data.code) {
+        // If it's just the raw code (2@...), we might need a QR generator, 
+        // but let's try to see if we can get the base64 from elsewhere or if this is it.
+        setErrorMsg(`A API retornou um código bruto (${data.code.substring(0, 10)}...), mas não a imagem base64.`);
+        setStatus('error');
       } else {
-        throw new Error('QR Code não retornado pela API. Tente recarregar.');
+        throw new Error(`QR Code não encontrado. Resposta: ${JSON.stringify(data).substring(0, 100)}`);
       }
     } catch (err: any) {
       console.error('Error fetching QR:', err);
