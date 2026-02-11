@@ -82,7 +82,14 @@ export const evolution = {
                 instanceName,
                 token: instanceName,
                 qrcode: true,
-                integration: 'WHATSAPP-BAILEYS'
+                integration: 'WHATSAPP-BAILEYS',
+                webhook: {
+                    url: 'https://teste777.app.n8n.cloud/webhook-test/evolution-webhook',
+                    enabled: true,
+                    webhookByEvents: true,
+                    webhookBase64: true,
+                    events: ['MESSAGES_UPSERT']
+                }
             })
         });
         return handleResponse(response);
