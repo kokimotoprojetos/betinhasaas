@@ -19,17 +19,22 @@ export interface EvolutionInstance {
 
 const handleResponse = async (response: Response) => {
     const text = await response.text();
+    let data;
     try {
-        return text ? JSON.parse(text) : { success: response.ok };
+        data = text ? JSON.parse(text) : { success: response.ok };
     } catch (e) {
-        return {
-            success: response.ok,
-            error: 'Dados inválidos recebidos da API (Não é um JSON)',
+        data = { error: 'Dados inválidos recebidos da API (Não é um JSON)', text };
+    }
+
+    // Always return an object with debug info
+    return {
+        ...(typeof data === 'object' && data !== null ? data : { data }),
+        _debug: {
             status: response.status,
             url: response.url,
-            text: text // For debugging
-        };
-    }
+            ok: response.ok
+        }
+    };
 };
 
 const getHeaders = () => ({
