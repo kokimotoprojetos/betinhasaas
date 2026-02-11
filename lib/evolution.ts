@@ -114,5 +114,24 @@ export const evolution = {
             headers: getHeaders()
         });
         return handleResponse(response);
+    },
+
+    async setWebhook(instanceName: string, webhookUrl: string, events: string[], enabled: boolean = true) {
+        validateConfig();
+        const response = await fetch(`${API_URL}/webhook/set/${instanceName}`, {
+            method: 'POST',
+            headers: {
+                ...getHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                url: webhookUrl,
+                webhookByEvents: true,
+                webhookBase64: true,
+                events: events,
+                enabled: enabled
+            })
+        });
+        return handleResponse(response);
     }
 };

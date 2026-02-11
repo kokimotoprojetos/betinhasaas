@@ -37,7 +37,13 @@ const WhatsAppConnect: React.FC = () => {
       console.log('Create response:', createRes);
 
       if (!createRes._debug?.ok) {
-        throw new Error(`Falha ao configurar instância. Detalhes: ${JSON.stringify(createRes._debug || createRes, null, 2)}`);
+        // Se retornar 403, significa que a instância já existe (provavelmente), então seguimos.
+        // Se for outro erro, lançamos exceção.
+        if (createRes._debug?.status === 403) {
+          console.warn('Instance creation returned 403 (likely exists), proceeding to connect...');
+        } else {
+          throw new Error(`Falha ao configurar instância. Detalhes: ${JSON.stringify(createRes._debug || createRes, null, 2)}`);
+        }
       }
 
       // Sync to our DB for n8n
@@ -57,6 +63,17 @@ const WhatsAppConnect: React.FC = () => {
       } else if (data.instance?.state === 'open' || data.state === 'open') {
         setStatus('connected');
         await syncInstance(name, 'connected');
+        // Configurar Webhook se já estiver conectado
+        try {
+          await evolution.setWebhook(
+            name,
+            'https://teste777.app.n8n.cloud/webhook-test/evolution-webhook',
+            ['MESSAGES_UPSERT'],
+            true
+          );
+        } catch (err) {
+          console.error('Failed to configure webhook on fetch:', err);
+        }
       } else {
         const debugInfo = {
           apiResponse: data,
@@ -86,6 +103,17 @@ const WhatsAppConnect: React.FC = () => {
           if (isConnected) {
             setStatus('connected');
             await syncInstance(name, 'connected');
+            // Configurar Webhook no init se já conectado
+            try {
+              await evolution.setWebhook(
+                name,
+                'https://teste777.app.n8n.cloud/webhook-test/evolution-webhook',
+                ['MESSAGES_UPSERT'],
+                true
+              );
+            } catch (err) {
+              console.error('Failed to configure webhook on init:', err);
+            }
           } else {
             fetchQRCode(name);
           }
@@ -109,6 +137,21 @@ const WhatsAppConnect: React.FC = () => {
             const state = await evolution.getInstanceStatus(instanceName);
             if (state.instance?.state === 'open' || state.state === 'open') {
               setStatus('connected');
+
+              // Configurar Webhook automaticamente
+              try {
+                console.log('Configuring webhook for:', instanceName);
+                await evolution.setWebhook(
+                  instanceName,
+                  'https://teste777.app.n8n.cloud/webhook-test/evolution-webhook',
+                  ['MESSAGES_UPSERT'],
+                  true
+                );
+                console.log('Webhook configured successfully');
+              } catch (webhookErr) {
+                console.error('Failed to configure webhook:', webhookErr);
+              }
+
               clearInterval(interval);
             }
           } catch (e) {
