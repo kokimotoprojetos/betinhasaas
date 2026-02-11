@@ -249,4 +249,3 @@ const StepItem: React.FC<{ icon: string; title: string; desc: React.ReactNode }>
 );
 
 export default WhatsAppConnect;
-```
