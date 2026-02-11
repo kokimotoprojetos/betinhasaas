@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 interface AgentConfig {
+    salon_name: string;
     email: string;
     whatsapp: string;
     prices: string;
@@ -15,6 +16,7 @@ const AIAgentSettings: React.FC = () => {
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [config, setConfig] = useState<AgentConfig>({
+        salon_name: '',
         email: '',
         whatsapp: '',
         prices: '',
@@ -43,6 +45,7 @@ const AIAgentSettings: React.FC = () => {
 
             if (data) {
                 setConfig({
+                    salon_name: data.salon_name || '',
                     email: data.email || '',
                     whatsapp: data.whatsapp || '',
                     prices: typeof data.prices === 'string' ? data.prices : JSON.stringify(data.prices, null, 2),
@@ -77,13 +80,14 @@ const AIAgentSettings: React.FC = () => {
 
             const payload = {
                 user_id: user.id,
+                salon_name: config.salon_name,
                 email: config.email,
                 whatsapp: config.whatsapp,
                 prices: parseField(config.prices),
                 schedules: parseField(config.schedules),
                 location: config.location,
                 description: config.description,
-                updated_at: new Promise(resolve => resolve(new Date().toISOString()))
+                updated_at: new Date().toISOString()
             };
 
             const { error } = await supabase
@@ -120,26 +124,39 @@ const AIAgentSettings: React.FC = () => {
 
                 <form onSubmit={handleSave} className="space-y-6">
                     <div className="bg-white dark:bg-surface-dark rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700/50 space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
                             <div className="space-y-2">
-                                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Email de Contato</label>
+                                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Nome do Salão / Barbearia</label>
                                 <input
-                                    type="email"
-                                    value={config.email}
-                                    onChange={(e) => setConfig({ ...config, email: e.target.value })}
-                                    placeholder="exemplo@salao.com"
+                                    type="text"
+                                    value={config.salon_name}
+                                    onChange={(e) => setConfig({ ...config, salon_name: e.target.value })}
+                                    placeholder="Ex: Barber Shop Triumfuz"
                                     className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">WhatsApp de Suporte</label>
-                                <input
-                                    type="text"
-                                    value={config.whatsapp}
-                                    onChange={(e) => setConfig({ ...config, whatsapp: e.target.value })}
-                                    placeholder="(11) 99999-9999"
-                                    className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                                />
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Email de Contato</label>
+                                    <input
+                                        type="email"
+                                        value={config.email}
+                                        onChange={(e) => setConfig({ ...config, email: e.target.value })}
+                                        placeholder="exemplo@salao.com"
+                                        className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">WhatsApp de Suporte</label>
+                                    <input
+                                        type="text"
+                                        value={config.whatsapp}
+                                        onChange={(e) => setConfig({ ...config, whatsapp: e.target.value })}
+                                        placeholder="(11) 99999-9999"
+                                        className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                    />
+                                </div>
                             </div>
                         </div>
 
