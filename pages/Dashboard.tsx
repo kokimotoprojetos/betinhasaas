@@ -12,19 +12,24 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     async function getInitialData() {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
 
-      if (user) {
-        const [convs, apts] = await Promise.all([
-          supabase.from('conversations').select('*').order('created_at', { ascending: false }).limit(5),
-          supabase.from('appointments').select('*').order('time', { ascending: true })
-        ]);
+        if (user) {
+          const [convs, apts] = await Promise.all([
+            supabase.from('conversations').select('*').order('created_at', { ascending: false }).limit(5),
+            supabase.from('appointments').select('*').order('time', { ascending: true })
+          ]);
 
-        if (convs.data) setConversations(convs.data as any);
-        if (apts.data) setAppointments(apts.data as any);
+          if (convs.data) setConversations(convs.data as any);
+          if (apts.data) setAppointments(apts.data as any);
+        }
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     getInitialData();
   }, []);
@@ -112,7 +117,7 @@ const Dashboard: React.FC = () => {
                         <img alt={chat.name} className="w-10 h-10 rounded-full object-cover" src={chat.avatar} />
                       ) : (
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${chat.initialsColor === 'orange' ? 'bg-orange-100 text-orange-600' :
-                            chat.initialsColor === 'purple' ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-600'
+                          chat.initialsColor === 'purple' ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-600'
                           }`}>
                           {chat.initials || chat.name.charAt(0)}
                         </div>
@@ -162,8 +167,8 @@ const Dashboard: React.FC = () => {
             <div className="p-4 space-y-3">
               {appointments.length > 0 ? appointments.map((apt) => (
                 <div key={apt.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${apt.isToday
-                    ? 'bg-lavender-light dark:bg-primary/5 border-transparent hover:border-primary/20'
-                    : 'bg-white dark:bg-transparent border-gray-100 dark:border-gray-700 opacity-75'
+                  ? 'bg-lavender-light dark:bg-primary/5 border-transparent hover:border-primary/20'
+                  : 'bg-white dark:bg-transparent border-gray-100 dark:border-gray-700 opacity-75'
                   }`}>
                   <div className="text-center min-w-[3rem]">
                     <div className={`text-xs font-bold uppercase ${apt.isToday ? 'text-primary' : 'text-slate-400'}`}>{apt.dayLabel}</div>
