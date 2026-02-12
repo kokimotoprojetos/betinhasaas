@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { evolution } from '../lib/evolution';
+import { useAuth } from '../context/AuthContext';
 
 const WhatsAppConnect: React.FC = () => {
   const { user } = useAuth();
