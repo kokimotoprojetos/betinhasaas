@@ -1,65 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { googleCalendar } from '../lib/googleCalendar';
+import { useAuth } from '../context/AuthContext';
 
 const Appointments: React.FC = () => {
+    const { user } = useAuth();
     const [isConnected, setIsConnected] = useState(false);
     const [loading, setLoading] = useState(true);
     const [events, setEvents] = useState<any[]>([]);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const timeout = setTimeout(() => {
-            setLoading(false);
-        }, 6000);
-
-        checkConnection().finally(() => clearTimeout(timeout));
-
-        return () => clearTimeout(timeout);
-    }, []);
-
-    const fetchEvents = async (userId: string) => {
+    const fetchEvents = useCallback(async (userId: string) => {
         try {
             const data = await googleCalendar.getEvents(userId);
             setEvents(data.items || []);
         } catch (err: any) {
             console.error('Error fetching events:', err);
             if (err.message.includes('Unauthorized')) {
-                setIsConnected(false); // Force reconnect if token is dead
+                setIsConnected(false);
             }
-            // Fallback to mock for UI dev if desired, or show error
-            // setError(err.message);
         }
-    };
+    }, []);
 
-    const checkConnection = async () => {
+    const checkConnection = useCallback(async () => {
+        if (!user) return;
         try {
             setLoading(true);
-            const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
-
-            if (sessionErr) {
-                console.error('Erro de sessão:', sessionErr);
-                return;
-            }
-
-            const user = session?.user;
-            if (!user) {
-                console.log('Nenhum usuário logado no checkConnection');
-                return;
-            }
-
             const instanceName = `user_${user.id.substring(0, 8)}`;
-
-            // TENTAR CAPTURAR TOKEN SE ACABOU DE VOLTAR DO OAUTH
-            if (session?.provider_token) {
-                await supabase.from('calendar_sync').upsert({
-                    user_id: user.id,
-                    instance_name: instanceName,
-                    access_token: session.provider_token,
-                    refresh_token: session.provider_refresh_token,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'user_id,instance_name' });
-            }
 
             const { data: existingConfig } = await supabase
                 .from('calendar_sync')
@@ -79,17 +46,19 @@ const Appointments: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user, fetchEvents]);
 
-    // Escutar por mudanças de auth nesta página também para capturar tokens
     useEffect(() => {
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-                checkConnection();
-            }
-        });
-        return () => subscription.unsubscribe();
-    }, []);
+        const timeout = setTimeout(() => {
+            setLoading(false);
+        }, 6000);
+
+        checkConnection().finally(() => clearTimeout(timeout));
+
+        return () => clearTimeout(timeout);
+    }, [checkConnection]);
+
+
 
     const handleConnect = async () => {
         try {

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { evolution } from '../lib/evolution';
 
 const WhatsAppConnect: React.FC = () => {
+  const { user } = useAuth();
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'connecting' | 'connected' | 'expired' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -11,7 +12,6 @@ const WhatsAppConnect: React.FC = () => {
 
   const syncInstance = useCallback(async (name: string, instanceStatus: string = 'connecting') => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       await supabase
@@ -90,7 +90,6 @@ const WhatsAppConnect: React.FC = () => {
 
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const name = `user_${user.id.substring(0, 8)}`;
         setInstanceName(name);
@@ -124,7 +123,7 @@ const WhatsAppConnect: React.FC = () => {
       }
     }
     init();
-  }, [fetchQRCode, syncInstance]);
+  }, [user, fetchQRCode, syncInstance]);
 
   useEffect(() => {
     let interval: any;

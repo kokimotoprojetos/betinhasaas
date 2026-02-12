@@ -1,35 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import MetricCard from '../components/MetricCard';
 import { Metric, Conversation, Appointment } from '../types';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 const Dashboard: React.FC = () => {
+  const { user } = useAuth();
   const [aiActive, setAiActive] = useState(true);
-  const [user, setUser] = useState<any>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) return; // Wait for user from context
+
     const timeout = setTimeout(() => {
       setLoading(false);
     }, 5000);
 
     async function getInitialData() {
       try {
-        const { data: { user: currentUser }, error: userErr } = await supabase.auth.getUser();
-        if (userErr) throw userErr;
-        setUser(currentUser);
+        const [convs, apts] = await Promise.all([
+          supabase.from('conversations').select('*').order('created_at', { ascending: false }).limit(5),
+          supabase.from('appointments').select('*').order('time', { ascending: true })
+        ]);
 
-        if (currentUser) {
-          const [convs, apts] = await Promise.all([
-            supabase.from('conversations').select('*').order('created_at', { ascending: false }).limit(5),
-            supabase.from('appointments').select('*').order('time', { ascending: true })
-          ]);
-
-          if (convs.data) setConversations(convs.data as any);
-          if (apts.data) setAppointments(apts.data as any);
-        }
+        if (convs.data) setConversations(convs.data as any);
+        if (apts.data) setAppointments(apts.data as any);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
       } finally {
@@ -40,14 +37,15 @@ const Dashboard: React.FC = () => {
     getInitialData();
 
     return () => clearTimeout(timeout);
-  }, []);
+  }, [user]);
 
-  const metrics: Metric[] = [
+  const metrics: Metric[] = useMemo(() => [
     { label: 'Total Appointments', value: appointments.length.toString(), trend: '+0%', trendUp: true, subtext: 'this week', icon: 'calendar_today' },
     { label: 'AI Response Rate', value: '0%', trend: '-', trendUp: false, progress: 0, icon: 'smart_toy' },
     { label: 'Customer Satisfaction', value: 'N/A', icon: 'sentiment_satisfied' },
     { label: 'Peak AI Activity', value: '-', subtext: 'N/A', icon: 'schedule' },
-  ];
+  ], [appointments.length]);
+
 
   const getGreeting = () => {
     const hour = new Date().getHours();

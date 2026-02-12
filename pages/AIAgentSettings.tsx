@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 interface AgentConfig {
     salon_name: string;
@@ -13,6 +14,7 @@ interface AgentConfig {
 }
 
 const AIAgentSettings: React.FC = () => {
+    const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -27,38 +29,19 @@ const AIAgentSettings: React.FC = () => {
         instance_name: ''
     });
 
-    useEffect(() => {
-        const timeout = setTimeout(() => {
-            setLoading(false);
-        }, 6000);
-
-        fetchConfig().finally(() => clearTimeout(timeout));
-
-        return () => clearTimeout(timeout);
-    }, []);
-
-    async function fetchConfig() {
+    const fetchConfig = useCallback(async () => {
+        if (!user) return;
         try {
             setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
 
-            // Fetch the connected instance name for this user
-            const { data: instanceData } = await supabase
-                .from('whatsapp_instances')
-                .select('instance_name')
-                .eq('user_id', user.id)
-                .single();
+            // Fetch in parallel
+            const [instanceRes, configRes] = await Promise.all([
+                supabase.from('whatsapp_instances').select('instance_name').eq('user_id', user.id).maybeSingle(),
+                supabase.from('ai_agent_configs').select('*').eq('user_id', user.id).maybeSingle()
+            ]);
 
-            const currentInstanceName = instanceData?.instance_name;
-
-            const { data, error } = await supabase
-                .from('ai_agent_configs')
-                .select('*')
-                .eq('user_id', user.id)
-                .single();
-
-            if (error && error.code !== 'PGRST116') throw error;
+            const currentInstanceName = instanceRes.data?.instance_name;
+            const data = configRes.data;
 
             if (data) {
                 setConfig({
@@ -69,10 +52,9 @@ const AIAgentSettings: React.FC = () => {
                     schedules: typeof data.schedules === 'string' ? data.schedules : JSON.stringify(data.schedules, null, 2),
                     location: data.location || '',
                     description: data.description || '',
-                    instance_name: data.instance_name || currentInstanceName || '' // Prefer saved, falback to current
+                    instance_name: data.instance_name || currentInstanceName || ''
                 });
             } else if (currentInstanceName) {
-                // If no config exists yet, pre-fill with the instance name
                 setConfig(prev => ({ ...prev, instance_name: currentInstanceName }));
             }
         } catch (err: any) {
@@ -80,15 +62,24 @@ const AIAgentSettings: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }
+    }, [user]);
+
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            setLoading(false);
+        }, 6000);
+
+        fetchConfig().finally(() => clearTimeout(timeout));
+
+        return () => clearTimeout(timeout);
+    }, [fetchConfig]);
 
     async function handleSave(e: React.FormEvent) {
         e.preventDefault();
+        if (!user) return;
         try {
             setSaving(true);
             setMessage(null);
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
 
             // Ensure we have the latest instance name if not set
             let targetInstanceName = config.instance_name;
