@@ -14,9 +14,6 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Debug: Log complete hash to see if tokens are arriving
-    console.log('--- DEBUG: URL HASH ATUAL ---');
-    console.log(window.location.hash);
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -31,17 +28,8 @@ const App: React.FC = () => {
       // Global capture of Google tokens
       // Global capture of Google tokens
       if (session?.provider_token && session?.user) {
-        console.log('--- DIAGNÓSTICO GOOGLE OAUTH ---');
-        console.log('User ID:', session.user.id);
-
-        const providerToken = session.provider_token;
-        const providerRefreshToken = session.provider_refresh_token;
-        const instanceName = `user_${session.user.id.substring(0, 8)}`;
-
-        console.log('Tentando salvar tokens na instância:', instanceName);
-
         // Save to the new isolated table
-        const { error } = await supabase
+        await supabase
           .from('calendar_sync')
           .upsert({
             user_id: session.user.id,
@@ -50,13 +38,6 @@ const App: React.FC = () => {
             refresh_token: providerRefreshToken,
             updated_at: new Date().toISOString()
           }, { onConflict: 'user_id,instance_name' });
-
-        if (error) {
-          console.error('ERRO AO SALVAR NA CALENDAR_SYNC:', error);
-          alert('ERRO DE BANCO DE DADOS: ' + error.message + '\n\nCertifique-se de rodar o script REPARO_ISOLAMENTO.sql no Supabase.');
-        } else {
-          console.log('SUCESSO: Google tokens salvos e isolados!');
-        }
       }
     });
 

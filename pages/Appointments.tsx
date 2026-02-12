@@ -43,49 +43,29 @@ const Appointments: React.FC = () => {
             }
 
             const instanceName = `user_${user.id.substring(0, 8)}`;
-            console.log('Iniciando checkConnection para:', instanceName);
 
             // TENTAR CAPTURAR TOKEN SE ACABOU DE VOLTAR DO OAUTH
             if (session?.provider_token) {
-                console.log('TOKEN DETECTADO! Salvando no banco...', session.provider_token.substring(0, 10) + '...');
-
-                const { error: upsertError } = await supabase.from('calendar_sync').upsert({
+                await supabase.from('calendar_sync').upsert({
                     user_id: user.id,
                     instance_name: instanceName,
                     access_token: session.provider_token,
                     refresh_token: session.provider_refresh_token,
                     updated_at: new Date().toISOString()
                 }, { onConflict: 'user_id,instance_name' });
-
-                if (upsertError) {
-                    console.error('Erro no upsert:', upsertError);
-                    alert('ERRO AO SALVAR AGENDA: ' + upsertError.message);
-                } else {
-                    console.log('Sucesso ao salvar token isolado!');
-                    // Opcional: recarregar para limpar o token da URL/Sessão se necessário
-                    // alert('Agenda conectada com sucesso!'); 
-                }
-            } else {
-                console.log('Nenhum provider_token na sessão atual.');
             }
 
-            const { data: existingConfig, error: fetchError } = await supabase
+            const { data: existingConfig } = await supabase
                 .from('calendar_sync')
                 .select('*')
                 .eq('user_id', user.id)
                 .eq('instance_name', instanceName)
                 .maybeSingle();
 
-            if (fetchError) {
-                console.error('Erro ao buscar config:', fetchError);
-            }
-
             if (existingConfig && existingConfig.access_token) {
-                console.log('Conexão ativa confirmada no banco!');
                 setIsConnected(true);
                 await fetchEvents(user.id);
             } else {
-                console.log('Nenhuma conexão ativa encontrada no banco para esta instância.');
                 setIsConnected(false);
             }
         } catch (err) {
