@@ -14,38 +14,59 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    // Safety timeout to ensure loading finishes eventually
+    const timeout = setTimeout(() => {
       setLoading(false);
-    });
+    }, 6000);
+
+    const initSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+      } catch (err) {
+        console.error('Error fetching session:', err);
+      } finally {
+        setLoading(false);
+        clearTimeout(timeout);
+      }
+    };
+
+    initSession();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
 
-      // Global capture of Google tokens
-      // Global capture of Google tokens
-      if (session?.provider_token && session?.user) {
-        const providerToken = session.provider_token;
-        const providerRefreshToken = session.provider_refresh_token;
-        const instanceName = `user_${session.user.id.substring(0, 8)}`;
+      try {
+        // Global capture of Google tokens
+        if (session?.provider_token && session?.user) {
+          const providerToken = session.provider_token;
+          const providerRefreshToken = session.provider_refresh_token;
+          const instanceName = `user_${session.user.id.substring(0, 8)}`;
 
-        // Save to the new isolated table
-        await supabase
-          .from('calendar_sync')
-          .upsert({
-            user_id: session.user.id,
-            instance_name: instanceName,
-            access_token: providerToken,
-            refresh_token: providerRefreshToken,
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'user_id,instance_name' });
+          console.log('Sync: Global token capture detected');
+
+          // Save to the new isolated table
+          await supabase
+            .from('calendar_sync')
+            .upsert({
+              user_id: session.user.id,
+              instance_name: instanceName,
+              access_token: providerToken,
+              refresh_token: providerRefreshToken,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'user_id,instance_name' });
+        }
+      } catch (err) {
+        console.warn('Sync error in onAuthStateChange:', err);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   if (loading) {
