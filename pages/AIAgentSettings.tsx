@@ -9,6 +9,7 @@ interface AgentConfig {
     schedules: string;
     location: string;
     description: string;
+    instance_name?: string;
 }
 
 const AIAgentSettings: React.FC = () => {
@@ -22,7 +23,8 @@ const AIAgentSettings: React.FC = () => {
         prices: '',
         schedules: '',
         location: '',
-        description: ''
+        description: '',
+        instance_name: ''
     });
 
     useEffect(() => {
@@ -34,6 +36,15 @@ const AIAgentSettings: React.FC = () => {
             setLoading(true);
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
+
+            // Fetch the connected instance name for this user
+            const { data: instanceData } = await supabase
+                .from('whatsapp_instances')
+                .select('instance_name')
+                .eq('user_id', user.id)
+                .single();
+
+            const currentInstanceName = instanceData?.instance_name;
 
             const { data, error } = await supabase
                 .from('ai_agent_configs')
@@ -51,8 +62,12 @@ const AIAgentSettings: React.FC = () => {
                     prices: typeof data.prices === 'string' ? data.prices : JSON.stringify(data.prices, null, 2),
                     schedules: typeof data.schedules === 'string' ? data.schedules : JSON.stringify(data.schedules, null, 2),
                     location: data.location || '',
-                    description: data.description || ''
+                    description: data.description || '',
+                    instance_name: data.instance_name || currentInstanceName || '' // Prefer saved, falback to current
                 });
+            } else if (currentInstanceName) {
+                // If no config exists yet, pre-fill with the instance name
+                setConfig(prev => ({ ...prev, instance_name: currentInstanceName }));
             }
         } catch (err: any) {
             console.error('Error fetching config:', err);
@@ -68,6 +83,18 @@ const AIAgentSettings: React.FC = () => {
             setMessage(null);
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
+
+            // Ensure we have the latest instance name if not set
+            let targetInstanceName = config.instance_name;
+            if (!targetInstanceName) {
+                const { data: instanceData } = await supabase
+                    .from('whatsapp_instances')
+                    .select('instance_name')
+                    .eq('user_id', user.id)
+                    .single();
+                targetInstanceName = instanceData?.instance_name;
+            }
+
 
             // Try to parse JSON fields if they look like JSON, otherwise save as string
             const parseField = (val: string) => {
@@ -87,6 +114,7 @@ const AIAgentSettings: React.FC = () => {
                 schedules: parseField(config.schedules),
                 location: config.location,
                 description: config.description,
+                instance_name: targetInstanceName, // Connect config to specific instance
                 updated_at: new Date().toISOString()
             };
 
@@ -95,7 +123,11 @@ const AIAgentSettings: React.FC = () => {
                 .upsert(payload);
 
             if (error) throw error;
-            setMessage({ type: 'success', text: 'Configurações salvas com sucesso!' });
+
+            // Also suggest keeping local state in sync
+            setConfig(prev => ({ ...prev, instance_name: targetInstanceName || prev.instance_name }));
+
+            setMessage({ type: 'success', text: 'Configurações salvas e vinculadas à instância!' });
         } catch (err: any) {
             console.error('Error saving config:', err);
             setMessage({ type: 'error', text: 'Erro ao salvar configurações.' });
