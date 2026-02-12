@@ -28,6 +28,10 @@ const App: React.FC = () => {
       // Global capture of Google tokens
       // Global capture of Google tokens
       if (session?.provider_token && session?.user) {
+        const providerToken = session.provider_token;
+        const providerRefreshToken = session.provider_refresh_token;
+        const instanceName = `user_${session.user.id.substring(0, 8)}`;
+
         // Save to the new isolated table
         await supabase
           .from('calendar_sync')
