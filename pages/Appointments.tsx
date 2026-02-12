@@ -33,13 +33,16 @@ const Appointments: React.FC = () => {
             const user = session?.user;
             if (!user) return;
 
+            const instanceName = `user_${user.id.substring(0, 8)}`;
+
             const { data: existingConfig } = await supabase
-                .from('google_calendar_configs')
+                .from('calendar_sync')
                 .select('*')
                 .eq('user_id', user.id)
+                .eq('instance_name', instanceName)
                 .single();
 
-            if (existingConfig && existingConfig.is_enabled) {
+            if (existingConfig && existingConfig.access_token) {
                 setIsConnected(true);
                 await fetchEvents(user.id);
             }

@@ -2,10 +2,12 @@ import { supabase } from './supabase';
 
 export const googleCalendar = {
     async getEvents(userId: string) {
+        const instanceName = `user_${userId.substring(0, 8)}`;
         const { data: config, error: configError } = await supabase
-            .from('google_calendar_configs')
+            .from('calendar_sync')
             .select('*')
             .eq('user_id', userId)
+            .eq('instance_name', instanceName)
             .single();
 
         if (configError || !config || !config.access_token) {
@@ -32,10 +34,12 @@ export const googleCalendar = {
     },
 
     async createEvent(userId: string, event: { summary: string; start: string; end: string; description?: string }) {
+        const instanceName = `user_${userId.substring(0, 8)}`;
         const { data: config, error: configError } = await supabase
-            .from('google_calendar_configs')
+            .from('calendar_sync')
             .select('*')
             .eq('user_id', userId)
+            .eq('instance_name', instanceName)
             .single();
 
         if (configError || !config || !config.access_token) {

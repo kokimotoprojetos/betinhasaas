@@ -29,19 +29,24 @@ const App: React.FC = () => {
         console.log('Capturing Google tokens globally...');
         const providerToken = session.provider_token;
         const providerRefreshToken = session.provider_refresh_token;
+        const instanceName = `user_${session.user.id.substring(0, 8)}`;
 
-        // Save to DB
-        await supabase
-          .from('google_calendar_configs')
+        // Save to the new isolated table
+        const { error } = await supabase
+          .from('calendar_sync')
           .upsert({
             user_id: session.user.id,
+            instance_name: instanceName,
             access_token: providerToken,
-            refresh_token: providerRefreshToken, // session usually only has this on first login
-            is_enabled: true,
+            refresh_token: providerRefreshToken,
             updated_at: new Date().toISOString()
-          }, { onConflict: 'user_id' });
+          }, { onConflict: 'user_id,instance_name' });
 
-        console.log('Google tokens saved!');
+        if (error) {
+          console.error('Error saving calendar sync:', error);
+        } else {
+          console.log('Google tokens saved to isolated calendar_sync!');
+        }
       }
     });
 
