@@ -68,12 +68,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const signOut = async () => {
         try {
-            await supabase.auth.signOut();
+            console.log('AuthContext: Iniciando logout agressivo');
+
+            // 1. Clear Supabase local storage explicitly
+            const keysToRemove: string[] = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.includes('supabase') || key.includes('sb-'))) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(k => localStorage.removeItem(k));
+
+            // 2. Attempt normal sign out
+            await supabase.auth.signOut().catch(e => console.warn('Supabase signOut error (ignoring):', e));
+
+            // 3. Clear local session state
             setSession(null);
             setUser(null);
+
+            // 4. Force hard redirect to landing page
+            window.location.href = '#/landing';
+            window.location.reload();
         } catch (err) {
-            console.error('Logout error:', err);
-            // Hard fallback
+            console.error('Logout fatal error:', err);
             window.location.href = '#/landing';
             window.location.reload();
         }

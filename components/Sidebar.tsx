@@ -7,8 +7,8 @@ const Sidebar: React.FC = () => {
   const { user, signOut } = useAuth();
 
   const handleLogout = async () => {
+    console.log('Sidebar: Clicou em sair');
     await signOut();
-    navigate('/landing');
   };
 
   const navItems = [

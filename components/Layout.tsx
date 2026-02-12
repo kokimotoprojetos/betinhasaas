@@ -9,8 +9,8 @@ const Layout: React.FC = () => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
+    console.log('Layout: Clicou em sair (mobile)');
     await signOut();
-    navigate('/landing');
   };
 
   return (
