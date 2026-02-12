@@ -35,6 +35,18 @@ const Appointments: React.FC = () => {
 
             const instanceName = `user_${user.id.substring(0, 8)}`;
 
+            // TENTAR CAPTURAR TOKEN SE ACABOU DE VOLTAR DO OAUTH
+            if (session?.provider_token) {
+                console.log('Token de provedor detectado no Appointments! Salvando...', instanceName);
+                await supabase.from('calendar_sync').upsert({
+                    user_id: user.id,
+                    instance_name: instanceName,
+                    access_token: session.provider_token,
+                    refresh_token: session.provider_refresh_token,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'user_id,instance_name' });
+            }
+
             const { data: existingConfig } = await supabase
                 .from('calendar_sync')
                 .select('*')
@@ -52,6 +64,16 @@ const Appointments: React.FC = () => {
             setLoading(false);
         }
     };
+
+    // Escutar por mudanças de auth nesta página também para capturar tokens
+    useEffect(() => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+                checkConnection();
+            }
+        });
+        return () => subscription.unsubscribe();
+    }, []);
 
     const handleConnect = async () => {
         try {
