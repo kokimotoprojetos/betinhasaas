@@ -44,9 +44,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const providerToken = session.provider_token;
                     const providerRefreshToken = session.provider_refresh_token;
                     const user_id = session.user.id;
-                    const instanceName = `user_${user_id.substring(0, 8)}`;
+                    const instanceName = `cal_${user_id.substring(0, 8)}`;
 
-                    console.log('Sync: Global token capture detected in Context');
+                    console.log('Sync: Global token capture detected in Context for', instanceName);
 
                     await supabase
                         .from('calendar_sync')

@@ -92,13 +92,19 @@ const WhatsAppConnect: React.FC = () => {
   useEffect(() => {
     async function init() {
       if (user) {
-        const name = `user_${user.id.substring(0, 8)}`;
+        const name = `wa_${user.id.substring(0, 8)}`;
         setInstanceName(name);
 
         try {
           const state = await evolution.getInstanceStatus(name);
-          console.log('Initial status:', state);
-          const isConnected = state.instance?.state === 'open' || state.state === 'open';
+          console.log('WhatsApp connection status check:', state);
+
+          // Evolution API can return state in state.state or state.instance.state
+          const currentState = state?.instance?.state || state?.state || 'unknown';
+          console.log('Normalized state:', currentState);
+
+          const isConnected = currentState === 'open';
+          const isConnecting = currentState === 'connecting' || currentState === 'reconnecting';
 
           if (isConnected) {
             setStatus('connected');
@@ -114,11 +120,16 @@ const WhatsAppConnect: React.FC = () => {
             } catch (err) {
               console.error('Failed to configure webhook on init:', err);
             }
+          } else if (isConnecting) {
+            console.log('WhatsApp is currently connecting, waiting for polling...');
+            setStatus('connecting');
+            setTimer(40);
           } else {
+            console.log('WhatsApp is not connected or connecting, fetching new QR...');
             fetchQRCode(name);
           }
         } catch (e) {
-          console.error('Error checking status:', e);
+          console.error('Error checking status, falling back to QR:', e);
           fetchQRCode(name);
         }
       }

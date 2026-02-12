@@ -88,8 +88,8 @@ const AIAgentSettings: React.FC = () => {
                     .from('whatsapp_instances')
                     .select('instance_name')
                     .eq('user_id', user.id)
-                    .single();
-                targetInstanceName = instanceData?.instance_name;
+                    .maybeSingle();
+                targetInstanceName = instanceData?.instance_name || `wa_${user.id.substring(0, 8)}`;
             }
 
 

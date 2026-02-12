@@ -26,7 +26,7 @@ const Appointments: React.FC = () => {
         if (!user) return;
         try {
             setLoading(true);
-            const instanceName = `user_${user.id.substring(0, 8)}`;
+            const instanceName = `cal_${user.id.substring(0, 8)}`;
 
             const { data: existingConfig } = await supabase
                 .from('calendar_sync')
