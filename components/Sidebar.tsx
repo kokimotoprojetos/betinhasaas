@@ -1,28 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-    });
-  }, []);
+  const { user, signOut } = useAuth();
 
   const handleLogout = async () => {
-    try {
-      console.log('Iniciando logout...');
-      await supabase.auth.signOut();
-      navigate('/landing');
-    } catch (e) {
-      console.error('Erro ao sair:', e);
-      // Fallback: Forçar navegação em caso de erro no Supabase
-      window.location.href = '#/landing';
-      window.location.reload();
-    }
+    await signOut();
+    navigate('/landing');
   };
 
   const navItems = [
