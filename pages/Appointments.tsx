@@ -110,7 +110,7 @@ const Appointments: React.FC = () => {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: window.location.origin + '/#/appointments',
+                    redirectTo: window.location.origin, // Redirect to root to avoid HashRouter fragment collision
                     scopes: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly',
                     queryParams: {
                         access_type: 'offline',

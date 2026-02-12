@@ -14,6 +14,10 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Debug: Log complete hash to see if tokens are arriving
+    console.log('--- DEBUG: URL HASH ATUAL ---');
+    console.log(window.location.hash);
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
