@@ -13,8 +13,16 @@ const Sidebar: React.FC = () => {
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/landing');
+    try {
+      console.log('Iniciando logout...');
+      await supabase.auth.signOut();
+      navigate('/landing');
+    } catch (e) {
+      console.error('Erro ao sair:', e);
+      // Fallback: Forçar navegação em caso de erro no Supabase
+      window.location.href = '#/landing';
+      window.location.reload();
+    }
   };
 
   const navItems = [

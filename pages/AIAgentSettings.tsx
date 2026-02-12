@@ -28,7 +28,13 @@ const AIAgentSettings: React.FC = () => {
     });
 
     useEffect(() => {
-        fetchConfig();
+        const timeout = setTimeout(() => {
+            setLoading(false);
+        }, 6000);
+
+        fetchConfig().finally(() => clearTimeout(timeout));
+
+        return () => clearTimeout(timeout);
     }, []);
 
     async function fetchConfig() {

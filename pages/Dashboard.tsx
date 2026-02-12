@@ -11,12 +11,17 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
+
     async function getInitialData() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
+        const { data: { user: currentUser }, error: userErr } = await supabase.auth.getUser();
+        if (userErr) throw userErr;
+        setUser(currentUser);
 
-        if (user) {
+        if (currentUser) {
           const [convs, apts] = await Promise.all([
             supabase.from('conversations').select('*').order('created_at', { ascending: false }).limit(5),
             supabase.from('appointments').select('*').order('time', { ascending: true })
@@ -29,9 +34,12 @@ const Dashboard: React.FC = () => {
         console.error('Error fetching dashboard data:', err);
       } finally {
         setLoading(false);
+        clearTimeout(timeout);
       }
     }
     getInitialData();
+
+    return () => clearTimeout(timeout);
   }, []);
 
   const metrics: Metric[] = [

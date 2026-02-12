@@ -9,7 +9,13 @@ const Appointments: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        checkConnection();
+        const timeout = setTimeout(() => {
+            setLoading(false);
+        }, 6000);
+
+        checkConnection().finally(() => clearTimeout(timeout));
+
+        return () => clearTimeout(timeout);
     }, []);
 
     const fetchEvents = async (userId: string) => {
