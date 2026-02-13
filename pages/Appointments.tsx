@@ -62,7 +62,8 @@ const Appointments: React.FC = () => {
 
     const handleConnect = async () => {
         try {
-            const { data, error } = await supabase.auth.linkIdentity({
+            console.log('Appointments: Initiating Google Calendar connection with linking enabled...');
+            const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
                     redirectTo: window.location.origin,
@@ -70,6 +71,8 @@ const Appointments: React.FC = () => {
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'consent',
+                        // This tells Supabase to link to the existing user instead of creating a new one
+                        link_identity: 'true'
                     }
                 }
             });
@@ -77,24 +80,7 @@ const Appointments: React.FC = () => {
             if (error) throw error;
         } catch (err: any) {
             console.error('Error connecting to Google:', err);
-            // Fallback: If linkIdentity fails (e.g. not supported in some versions or specific errors), try standard sign in but warn user
-            if (err.message && err.message.includes('already linked')) {
-                alert('Esta conta do Google já está vinculada. Tentando atualizar credenciais...');
-                // Force re-auth to refresh tokens if needed, but carefully
-                await supabase.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: {
-                        redirectTo: window.location.origin,
-                        scopes: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly',
-                        queryParams: {
-                            access_type: 'offline',
-                            prompt: 'consent',
-                        }
-                    }
-                });
-            } else {
-                alert('Erro ao conectar com Google: ' + err.message);
-            }
+            alert('Erro ao conectar com Google: ' + err.message);
         }
     };
 
