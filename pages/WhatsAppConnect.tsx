@@ -30,7 +30,7 @@ const WhatsAppConnect: React.FC = () => {
   }, [user]);
 
   const checkCalendarConnection = useCallback(async () => {
-    if (!user) return;
+    if (!user) return false;
     try {
       const instanceName = `cal_${user.id.substring(0, 8)}`;
       const { data } = await supabase
@@ -40,10 +40,13 @@ const WhatsAppConnect: React.FC = () => {
         .eq('instance_name', instanceName)
         .maybeSingle();
 
-      setIsCalendarConnected(!!data?.access_token);
+      const connected = !!data?.access_token;
+      setIsCalendarConnected(connected);
+      return connected;
     } catch (err) {
       console.error('Error checking calendar connection:', err);
       setIsCalendarConnected(false);
+      return false;
     }
   }, [user]);
 
@@ -111,7 +114,7 @@ const WhatsAppConnect: React.FC = () => {
   useEffect(() => {
     async function init() {
       if (user) {
-        await checkCalendarConnection();
+        const hasCalendar = await checkCalendarConnection();
         const name = `wa_${user.id.substring(0, 8)}`;
         setInstanceName(name);
 
@@ -146,20 +149,20 @@ const WhatsAppConnect: React.FC = () => {
             setTimer(40);
           } else {
             console.log('WhatsApp is not connected or connecting, fetching new QR...');
-            if (isCalendarConnected) {
+            if (hasCalendar) {
               fetchQRCode(name);
             }
           }
         } catch (e) {
           console.error('Error checking status, falling back to QR:', e);
-          if (isCalendarConnected) {
+          if (hasCalendar) {
             fetchQRCode(name);
           }
         }
       }
     }
     init();
-  }, [user, fetchQRCode, syncInstance, isCalendarConnected, checkCalendarConnection]);
+  }, [user, fetchQRCode, syncInstance, checkCalendarConnection]);
 
   useEffect(() => {
     let interval: any;
