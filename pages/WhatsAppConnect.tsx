@@ -10,6 +10,7 @@ const WhatsAppConnect: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [timer, setTimer] = useState(40);
   const [instanceName, setInstanceName] = useState<string | null>(null);
+  const [isCalendarConnected, setIsCalendarConnected] = useState<boolean | null>(null);
 
   const syncInstance = useCallback(async (name: string, instanceStatus: string = 'connecting') => {
     try {
@@ -26,7 +27,25 @@ const WhatsAppConnect: React.FC = () => {
     } catch (err) {
       console.warn('Error syncing instance to DB:', err);
     }
-  }, []);
+  }, [user]);
+
+  const checkCalendarConnection = useCallback(async () => {
+    if (!user) return;
+    try {
+      const instanceName = `cal_${user.id.substring(0, 8)}`;
+      const { data } = await supabase
+        .from('calendar_sync')
+        .select('access_token')
+        .eq('user_id', user.id)
+        .eq('instance_name', instanceName)
+        .maybeSingle();
+
+      setIsCalendarConnected(!!data?.access_token);
+    } catch (err) {
+      console.error('Error checking calendar connection:', err);
+      setIsCalendarConnected(false);
+    }
+  }, [user]);
 
   const fetchQRCode = useCallback(async (name: string) => {
     try {
@@ -92,6 +111,7 @@ const WhatsAppConnect: React.FC = () => {
   useEffect(() => {
     async function init() {
       if (user) {
+        await checkCalendarConnection();
         const name = `wa_${user.id.substring(0, 8)}`;
         setInstanceName(name);
 
@@ -126,16 +146,20 @@ const WhatsAppConnect: React.FC = () => {
             setTimer(40);
           } else {
             console.log('WhatsApp is not connected or connecting, fetching new QR...');
-            fetchQRCode(name);
+            if (isCalendarConnected) {
+              fetchQRCode(name);
+            }
           }
         } catch (e) {
           console.error('Error checking status, falling back to QR:', e);
-          fetchQRCode(name);
+          if (isCalendarConnected) {
+            fetchQRCode(name);
+          }
         }
       }
     }
     init();
-  }, [user, fetchQRCode, syncInstance]);
+  }, [user, fetchQRCode, syncInstance, isCalendarConnected, checkCalendarConnection]);
 
   useEffect(() => {
     let interval: any;
@@ -246,7 +270,26 @@ const WhatsAppConnect: React.FC = () => {
 
               <div className="bg-white p-2 rounded-2xl shadow-xl border-4 border-white dark:border-slate-700 relative overflow-hidden group">
                 <div className="aspect-square bg-white rounded-xl overflow-hidden relative flex items-center justify-center">
-                  {status === 'connected' ? (
+                  {isCalendarConnected === false ? (
+                    <div className="flex flex-col items-center gap-6 p-8 text-center animate-fade-in">
+                      <div className="w-20 h-20 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 flex items-center justify-center">
+                        <span className="material-symbols-outlined text-amber-500 text-4xl">calendar_today</span>
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-800 dark:text-white mb-2">Agenda Necessária</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                          Para uma sincronização perfeita, você precisa conectar sua Google Agenda antes do WhatsApp.
+                        </p>
+                      </div>
+                      <a
+                        href="#/appointments"
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all shadow-md active:scale-95"
+                      >
+                        <span className="material-symbols-outlined text-sm">link</span>
+                        Conectar Agenda Agora
+                      </a>
+                    </div>
+                  ) : status === 'connected' ? (
                     <div className="flex flex-col items-center gap-4 animate-scale-up">
                       <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
                         <span className="material-symbols-outlined text-green-600 text-5xl">check_circle</span>
