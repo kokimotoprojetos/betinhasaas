@@ -34,10 +34,22 @@ const AIAgentSettings: React.FC = () => {
         try {
             setLoading(true);
 
-            // Fetch in parallel
+            // Fetch in parallel - handle multiple results by taking the most recent
             const [instanceRes, configRes] = await Promise.all([
-                supabase.from('whatsapp_instances').select('instance_name').eq('user_id', user.id).maybeSingle(),
-                supabase.from('ai_agent_configs').select('*').eq('user_id', user.id).maybeSingle()
+                supabase
+                    .from('whatsapp_instances')
+                    .select('instance_name')
+                    .eq('user_id', user.id)
+                    .order('updated_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle(),
+                supabase
+                    .from('ai_agent_configs')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('updated_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle()
             ]);
 
             const currentInstanceName = instanceRes.data?.instance_name;
@@ -59,6 +71,7 @@ const AIAgentSettings: React.FC = () => {
             }
         } catch (err: any) {
             console.error('Error fetching config:', err);
+            setMessage({ type: 'error', text: 'Erro ao carregar configurações: ' + (err.message || 'Erro desconhecido') });
         } finally {
             setLoading(false);
         }
@@ -84,11 +97,19 @@ const AIAgentSettings: React.FC = () => {
             // Ensure we have the latest instance name if not set
             let targetInstanceName = config.instance_name;
             if (!targetInstanceName) {
-                const { data: instanceData } = await supabase
+                const { data: instanceData, error: instanceError } = await supabase
                     .from('whatsapp_instances')
                     .select('instance_name')
                     .eq('user_id', user.id)
+                    .order('updated_at', { ascending: false })
+                    .limit(1)
                     .maybeSingle();
+
+                if (instanceError) {
+                    console.error('Error fetching instance for save:', instanceError);
+                    throw new Error('Falha ao identificar sua conexão. Por favor, conecte o WhatsApp primeiro.');
+                }
+
                 targetInstanceName = instanceData?.instance_name || `wa_${user.id.substring(0, 8)}`;
             }
 
@@ -115,19 +136,25 @@ const AIAgentSettings: React.FC = () => {
                 updated_at: new Date().toISOString()
             };
 
-            const { error } = await supabase
+            const { error: saveError } = await supabase
                 .from('ai_agent_configs')
                 .upsert(payload);
 
-            if (error) throw error;
+            if (saveError) {
+                console.error('Database save error:', saveError);
+                throw saveError;
+            }
 
             // Also suggest keeping local state in sync
             setConfig(prev => ({ ...prev, instance_name: targetInstanceName || prev.instance_name }));
 
-            setMessage({ type: 'success', text: 'Configurações salvas e vinculadas à instância!' });
+            setMessage({ type: 'success', text: 'Configurações salvas com sucesso!' });
         } catch (err: any) {
             console.error('Error saving config:', err);
-            setMessage({ type: 'error', text: 'Erro ao salvar configurações.' });
+            setMessage({
+                type: 'error',
+                text: 'Erro ao salvar: ' + (err.message || 'Verifique sua conexão e tente novamente.')
+            });
         } finally {
             setSaving(false);
         }
