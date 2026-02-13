@@ -143,12 +143,9 @@ const WhatsAppConnect: React.FC = () => {
             } catch (err) {
               console.error('Failed to configure webhook on init:', err);
             }
-          } else if (isConnecting) {
-            console.log('WhatsApp is currently connecting, waiting for polling...');
-            setStatus('connecting');
-            setTimer(40);
           } else {
-            console.log('WhatsApp is not connected or connecting, fetching new QR...');
+            // Se não estiver conectado (mesmo que esteja 'connecting'), buscamos o QR code
+            console.log('WhatsApp is not fully connected, fetching QR code...');
             if (hasCalendar) {
               fetchQRCode(name);
             }
