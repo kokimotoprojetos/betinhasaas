@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 
 export const googleCalendar = {
     async getEvents(userId: string) {
-        const instanceName = `user_${userId.substring(0, 8)}`;
+        const instanceName = `cal_${userId.substring(0, 8)}`;
         const { data: config, error: configError } = await supabase
             .from('calendar_sync')
             .select('*')
@@ -34,7 +34,7 @@ export const googleCalendar = {
     },
 
     async createEvent(userId: string, event: { summary: string; start: string; end: string; description?: string }) {
-        const instanceName = `user_${userId.substring(0, 8)}`;
+        const instanceName = `cal_${userId.substring(0, 8)}`;
         const { data: config, error: configError } = await supabase
             .from('calendar_sync')
             .select('*')
