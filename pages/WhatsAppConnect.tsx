@@ -195,10 +195,15 @@ const WhatsAppConnect: React.FC = () => {
         }
       }, 1000);
     } else if (timer === 0 && status === 'connecting') {
-      setStatus('expired');
+      if (instanceName) {
+        console.log('QR Code expired, auto-reloading...');
+        fetchQRCode(instanceName);
+      } else {
+        setStatus('expired');
+      }
     }
     return () => clearInterval(interval);
-  }, [status, timer, instanceName]);
+  }, [status, timer, instanceName, fetchQRCode]);
 
   const handleReload = () => {
     if (instanceName) fetchQRCode(instanceName);
@@ -259,8 +264,8 @@ const WhatsAppConnect: React.FC = () => {
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-20">
                 <div className="bg-white dark:bg-surface-dark px-4 py-1.5 rounded-full shadow-lg border border-slate-100 dark:border-slate-700 flex items-center gap-2 whitespace-nowrap">
                   <div className="relative flex h-2.5 w-2.5">
-                    <span className={`absolute inline - flex h - full w - full rounded - full ${status === 'connected' ? 'bg-green-500' : 'bg-primary'} opacity - 75 ${(status === 'connecting' || status === 'loading') && 'animate-ping'} `}></span>
-                    <span className={`relative inline - flex rounded - full h - 2.5 w - 2.5 ${status === 'error' || status === 'expired' ? 'bg-red-500' : status === 'connected' ? 'bg-green-500' : 'bg-primary'} `}></span>
+                    <span className={`absolute inline-flex h-full w-full rounded-full ${status === 'connected' ? 'bg-green-500' : 'bg-primary'} opacity-75 ${(status === 'connecting' || status === 'loading') && 'animate-ping'}`}></span>
+                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${status === 'error' || status === 'expired' ? 'bg-red-500' : status === 'connected' ? 'bg-green-500' : 'bg-primary'}`}></span>
                   </div>
                   <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 tracking-wide uppercase">
                     {status === 'connected' ? 'Conectado' : status === 'error' ? 'Erro' : status === 'expired' ? 'Expirado' : status === 'loading' ? 'Iniciando...' : 'Escaneie o código'}
@@ -300,14 +305,14 @@ const WhatsAppConnect: React.FC = () => {
                   ) : (
                     <>
                       {status === 'loading' && (
-                        <div className="flex flex-col items-center gap-4">
+                        <div className="flex flex-col items-center gap-4 z-30 bg-white/90 dark:bg-slate-900/90 absolute inset-0 justify-center">
                           <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                          <p className="text-sm font-semibold text-slate-500">Configurando Instância...</p>
+                          <p className="text-sm font-semibold text-slate-500">Buscando QR Code...</p>
                         </div>
                       )}
 
                       {status === 'error' && (
-                        <div className="flex flex-col items-center gap-4 p-6 text-center">
+                        <div className="flex flex-col items-center gap-4 p-6 text-center z-30 bg-white absolute inset-0 justify-center">
                           <span className="material-symbols-outlined text-red-500 text-5xl">error</span>
                           <p className="font-bold text-slate-800">Falha na conexão</p>
                           <p className="text-xs text-slate-500">{errorMsg}</p>
@@ -315,10 +320,10 @@ const WhatsAppConnect: React.FC = () => {
                         </div>
                       )}
 
-                      {(status === 'connecting' || status === 'expired') && qrCode && (
+                      {(status === 'connecting' || status === 'expired' || status === 'loading') && qrCode && (
                         <img
                           alt="WhatsApp Connection QR Code"
-                          className={`w - full h - full object - contain p - 4 transition - opacity duration - 300 ${status === 'expired' ? 'opacity-20 blur-sm' : 'opacity-100'} `}
+                          className={`w-full h-full object-contain p-4 transition-opacity duration-300 ${status === 'expired' ? 'opacity-20 blur-sm' : 'opacity-100'}`}
                           src={qrCode}
                         />
                       )}
@@ -332,7 +337,7 @@ const WhatsAppConnect: React.FC = () => {
 
                       {status === 'expired' && (
                         <div
-                          className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer z-20"
+                          className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer z-20 bg-white/80"
                           onClick={handleReload}
                         >
                           <span className="material-symbols-outlined text-4xl text-primary mb-2 animate-bounce">refresh</span>
@@ -344,13 +349,13 @@ const WhatsAppConnect: React.FC = () => {
                 </div>
               </div>
 
-              {status !== 'connected' && status !== 'error' && status !== 'loading' && (
+              {status !== 'connected' && (
                 <div className="mt-6 flex flex-col items-center gap-3">
                   <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                    O código expira em <span className={`tabular - nums ${status === 'expired' ? 'text-red-500' : 'text-slate-900 dark:text-primary'} `}>{timer}s</span>
+                    {status === 'loading' ? 'Iniciando...' : <>O código expira em <span className={`tabular-nums ${status === 'expired' ? 'text-red-500' : 'text-slate-900 dark:text-primary'}`}>{timer}s</span></>}
                   </p>
                   <div className="w-48 h-1 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                    <div className="h-full bg-primary rounded-full transition-all duration-1000 ease-linear" style={{ width: `${(timer / 40) * 100}% ` }}></div>
+                    <div className="h-full bg-primary rounded-full transition-all duration-1000 ease-linear" style={{ width: `${(timer / 40) * 100}%` }}></div>
                   </div>
                 </div>
               )}
